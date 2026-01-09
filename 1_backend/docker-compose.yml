@@ -1,0 +1,41 @@
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: tosyam-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: tosyam
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - tosyam-network
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: tosyam-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    depends_on:
+      - mongodb
+    networks:
+      - tosyam-network
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+
+networks:
+  tosyam-network:
+    driver: bridge
+
