@@ -21,12 +21,12 @@ class CreatePostDto {
 exports.CreatePostDto = CreatePostDto;
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsUrl)({}, { message: 'Image must be a valid URL' }),
+    (0, class_validator_1.IsString)({ message: 'Image must be a string (base64 or URL)' }),
     __metadata("design:type", String)
 ], CreatePostDto.prototype, "image", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsUrl)({}, { message: 'Video must be a valid URL' }),
+    (0, class_validator_1.IsString)({ message: 'Video must be a string (base64 or URL)' }),
     __metadata("design:type", String)
 ], CreatePostDto.prototype, "video", void 0);
 __decorate([

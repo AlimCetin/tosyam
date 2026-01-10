@@ -36,19 +36,45 @@ export const PostDetailScreen: React.FC = () => {
   const loadPost = async () => {
     try {
       const postData = await postService.getPostById(postId);
-      console.log('📥 PostDetailScreen loadPost:', {
-        postId,
-        isPrivate: postData.isPrivate,
-        hiddenFromFollowers: postData.hiddenFromFollowers,
-        hiddenCount: postData.hiddenFromFollowers?.length || 0
+      
+      // Check if this is own post
+      const currentUser = authService.getCurrentUser() as any;
+      
+      // Current user ID - try both _id and id
+      let currentUserId = '';
+      if (currentUser) {
+        currentUserId = String(currentUser._id || currentUser.id || '');
+      }
+      
+      // Post userId - backend sends both userId and user.id
+      let postUserId = '';
+      if (postData) {
+        postUserId = String(
+          postData.userId || 
+          (postData as any).user?.id || 
+          (postData as any).user?._id || 
+          ''
+        );
+      }
+      
+      // Both must exist and match
+      const isOwn = Boolean(currentUserId && postUserId && currentUserId === postUserId);
+      
+      console.log('🔍 DETAILED Ownership check:', {
+        currentUser_id: currentUser?._id,
+        currentUser_id_type: typeof currentUser?._id,
+        currentUser_id_value: currentUser?.id,
+        currentUserId_final: currentUserId,
+        postData_userId: postData.userId,
+        postData_userId_type: typeof postData.userId,
+        postData_user_id: (postData as any).user?.id,
+        postUserId_final: postUserId,
+        isOwn,
+        comparison: `"${currentUserId}" === "${postUserId}"`,
       });
       
       setPost(postData);
-      
-      // Check if this is own post
-      const currentUser = authService.getCurrentUser();
-      const currentUserId = currentUser?._id || currentUser?.id;
-      setIsOwnPost(postData.userId === currentUserId);
+      setIsOwnPost(isOwn);
     } catch (error: any) {
       console.error('Gönderi yüklenemedi:', error);
       if (error.response?.status === 403 || error.response?.status === 404) {
@@ -184,7 +210,7 @@ export const PostDetailScreen: React.FC = () => {
             style={styles.commentsButton}
             onPress={() => navigation.navigate('Comments', { postId })}>
             <Text style={styles.commentsButtonText}>
-              {post.commentCount > 0 
+              {(post.commentCount || 0) > 0 
                 ? `${post.commentCount} yorumun tamamını gör` 
                 : 'Yorum yap'}
             </Text>
@@ -196,7 +222,24 @@ export const PostDetailScreen: React.FC = () => {
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.userInfo}
-              onPress={() => navigation.navigate('Profile', { userId: post.userId })}>
+              onPress={() => {
+                // Profile ekranına giderken, eğer navigation stack'inde zaten Profile varsa
+                // ona dönüp params'ı güncelle, yeni ekran açma
+                const routes = navigation.getState()?.routes;
+                const profileRouteIndex = routes?.findIndex((r: any) => r.name === 'Profile');
+                
+                if (profileRouteIndex !== undefined && profileRouteIndex >= 0) {
+                  // Stack'te Profile var, ona dön ve params'ı güncelle
+                  navigation.navigate({
+                    name: 'Profile',
+                    params: { userId: post.userId },
+                    merge: true,
+                  } as never);
+                } else {
+                  // Stack'te Profile yok, normal navigate
+                  navigation.navigate('Profile', { userId: post.userId });
+                }
+              }}>
               <Image
                 source={{ uri: post.user?.avatar || 'https://via.placeholder.com/40' }}
                 style={styles.avatar}
@@ -270,7 +313,7 @@ export const PostDetailScreen: React.FC = () => {
               </Text>
               <Text style={styles.captionText}>{post.caption || ''}</Text>
             </View>
-            {post.commentCount > 0 && (
+            {(post.commentCount || 0) > 0 && (
               <TouchableOpacity onPress={() => navigation.navigate('Comments', { postId })}>
                 <Text style={styles.comments}>
                   {post.commentCount} yorumun tamamını gör

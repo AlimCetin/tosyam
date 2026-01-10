@@ -2,11 +2,13 @@ import { Model } from 'mongoose';
 import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
 import { Notification } from '../entities/notification.entity';
+import { RedisService } from '../common/redis/redis.service';
 export declare class MessagesService {
     private conversationModel;
     private messageModel;
     private notificationModel;
-    constructor(conversationModel: Model<Conversation>, messageModel: Model<Message>, notificationModel: Model<Notification>);
+    private readonly redisService;
+    constructor(conversationModel: Model<Conversation>, messageModel: Model<Message>, notificationModel: Model<Notification>, redisService: RedisService);
     getConversations(userId: string, page?: number, limit?: number): Promise<{
         conversations: ({
             _id: any;

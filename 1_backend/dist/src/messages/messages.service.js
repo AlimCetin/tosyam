@@ -19,14 +19,17 @@ const mongoose_2 = require("mongoose");
 const conversation_entity_1 = require("../entities/conversation.entity");
 const message_entity_1 = require("../entities/message.entity");
 const notification_entity_1 = require("../entities/notification.entity");
+const redis_service_1 = require("../common/redis/redis.service");
 let MessagesService = class MessagesService {
     conversationModel;
     messageModel;
     notificationModel;
-    constructor(conversationModel, messageModel, notificationModel) {
+    redisService;
+    constructor(conversationModel, messageModel, notificationModel, redisService) {
         this.conversationModel = conversationModel;
         this.messageModel = messageModel;
         this.notificationModel = notificationModel;
+        this.redisService = redisService;
     }
     async getConversations(userId, page = 1, limit = 20) {
         const skip = (page - 1) * limit;
@@ -203,6 +206,16 @@ let MessagesService = class MessagesService {
             fromUserId: senderId,
             type: 'message',
         });
+        const cacheKey = `notification:unread:${receiverId}`;
+        const cached = await this.redisService.get(cacheKey);
+        if (cached !== null) {
+            await this.redisService.incr(cacheKey);
+            await this.redisService.expire(cacheKey, 60);
+        }
+        else {
+            await this.redisService.set(cacheKey, '1', 60);
+        }
+        await this.redisService.del(`messages:unread:${receiverId}`);
         const populatedMessage = await message.populate('senderId', 'email fullName avatar');
         const msgObj = populatedMessage.toObject();
         const sender = msgObj.senderId;
@@ -247,9 +260,15 @@ let MessagesService = class MessagesService {
             userId,
             modifiedCount: result.modifiedCount,
         });
+        await this.redisService.del(`messages:unread:${userId}`);
         return { modifiedCount: result.modifiedCount };
     }
     async getUnreadMessagesCount(userId) {
+        const cacheKey = `messages:unread:${userId}`;
+        const cached = await this.redisService.get(cacheKey);
+        if (cached !== null) {
+            return parseInt(cached);
+        }
         const userIdStr = String(userId).trim();
         const conversations = await this.conversationModel.find({
             participants: userIdStr,
@@ -257,6 +276,7 @@ let MessagesService = class MessagesService {
         }).select('_id').lean();
         const conversationIds = conversations.map((c) => c._id.toString());
         if (conversationIds.length === 0) {
+            await this.redisService.set(cacheKey, '0', 60);
             return 0;
         }
         const unreadMessages = await this.messageModel.find({
@@ -271,7 +291,9 @@ let MessagesService = class MessagesService {
                 conversationsWithUnread.add(String(msg.conversationId));
             }
         });
-        return conversationsWithUnread.size;
+        const count = conversationsWithUnread.size;
+        await this.redisService.set(cacheKey, count.toString(), 60);
+        return count;
     }
 };
 exports.MessagesService = MessagesService;
@@ -282,6 +304,7 @@ exports.MessagesService = MessagesService = __decorate([
     __param(2, (0, mongoose_1.InjectModel)(notification_entity_1.Notification.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
         mongoose_2.Model,
-        mongoose_2.Model])
+        mongoose_2.Model,
+        redis_service_1.RedisService])
 ], MessagesService);
 //# sourceMappingURL=messages.service.js.map

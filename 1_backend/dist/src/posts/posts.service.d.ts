@@ -5,13 +5,15 @@ import { Comment } from '../entities/comment.entity';
 import { Notification } from '../entities/notification.entity';
 import { User } from '../entities/user.entity';
 import { Ad } from '../entities/ad.entity';
+import { RedisService } from '../common/redis/redis.service';
 export declare class PostsService {
     private postModel;
     private commentModel;
     private notificationModel;
     private userModel;
     private adModel;
-    constructor(postModel: Model<Post>, commentModel: Model<Comment>, notificationModel: Model<Notification>, userModel: Model<User>, adModel: Model<Ad>);
+    private readonly redisService;
+    constructor(postModel: Model<Post>, commentModel: Model<Comment>, notificationModel: Model<Notification>, userModel: Model<User>, adModel: Model<Ad>, redisService: RedisService);
     create(userId: string, image: string | undefined, caption: string, isPrivate?: boolean, hiddenFromFollowers?: string[], video?: string): Promise<import("mongoose").Document<unknown, {}, Post, {}, import("mongoose").DefaultSchemaOptions> & Post & Required<{
         _id: Types.ObjectId;
     }> & {
@@ -32,14 +34,8 @@ export declare class PostsService {
             hasMore: boolean;
         };
     }>;
-    getFeed(userId: string, page?: number, limit?: number): Promise<{
-        posts: any[];
-        pagination: {
-            page: number;
-            limit: number;
-            hasMore: boolean;
-        };
-    }>;
+    getFeed(userId: string, page?: number, limit?: number): Promise<any>;
+    invalidateFeedCache(userId: string): Promise<void>;
     getUserPosts(userId: string, currentUserId?: string, page?: number, limit?: number): Promise<{
         posts: {
             id: any;

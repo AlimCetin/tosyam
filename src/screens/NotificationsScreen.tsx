@@ -152,13 +152,28 @@ export const NotificationsScreen: React.FC = () => {
         />
         <View style={styles.content}>
           <Text style={styles.text}>
-            <Text style={styles.username}>
-              {fromUser.username || fromUser.fullName || 'Unknown'}
-            </Text>{' '}
-            {item.type === 'like' && 'gönderini beğendi'}
-            {item.type === 'comment' && 'gönderine yorum yaptı'}
-            {item.type === 'follow' && 'seni takip etmeye başladı'}
-            {item.type === 'message' && 'sana mesaj gönderdi'}
+            {item.isFollowerNotification ? (
+              // Takipçi bildirimi - Takip ettiği kişinin postuna yapılan işlem
+              <>
+                <Text style={styles.username}>
+                  {item.postOwnerName || 'Birinin'}
+                </Text>
+                {' paylaşımı '}
+                {item.type === 'like' && 'beğenildi'}
+                {item.type === 'comment' && 'yorumlandı'}
+              </>
+            ) : (
+              // Normal bildirim - Kullanıcının kendi postuna/profiline yapılan işlem
+              <>
+                <Text style={styles.username}>
+                  {fromUser.username || fromUser.fullName || 'Unknown'}
+                </Text>{' '}
+                {item.type === 'like' && 'gönderini beğendi'}
+                {item.type === 'comment' && 'gönderine yorum yaptı'}
+                {item.type === 'follow' && 'seni takip etmeye başladı'}
+                {item.type === 'message' && 'sana mesaj gönderdi'}
+              </>
+            )}
           </Text>
           <Text style={styles.time}>{item.createdAt}</Text>
         </View>

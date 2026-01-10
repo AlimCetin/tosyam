@@ -15,6 +15,12 @@ export class Notification extends Document {
   @Prop({ type: String, ref: 'Post' })
   postId?: string;
 
+  @Prop({ type: String, default: null })
+  postOwnerName?: string; // Takipçi bildirimlerinde post sahibinin adı
+
+  @Prop({ default: false })
+  isFollowerNotification: boolean; // Takipçi bildirimi mi?
+
   @Prop({ default: false })
   read: boolean;
 

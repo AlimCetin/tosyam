@@ -9,6 +9,7 @@ import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
 import { Notification } from '../entities/notification.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { RedisService } from '../common/redis/redis.service';
 
 @Injectable()
 export class UsersService {
@@ -20,9 +21,25 @@ export class UsersService {
     @InjectModel(Conversation.name) private conversationModel: Model<Conversation>,
     @InjectModel(Message.name) private messageModel: Model<Message>,
     @InjectModel(Notification.name) private notificationModel: Model<Notification>,
+    private readonly redisService: RedisService,
   ) {}
 
   async findById(userId: string, currentUserId?: string) {
+    // Cache key: user:userId
+    const cacheKey = `user:${userId}`;
+
+    // Try to get from cache first (only if not viewing as another user, to avoid cache complexity)
+    if (!currentUserId || currentUserId === userId) {
+      const cached = await this.redisService.get(cacheKey);
+      if (cached) {
+        const cachedUser = JSON.parse(cached);
+        // If viewing own profile, return cached data
+        if (!currentUserId || currentUserId === userId) {
+          return cachedUser;
+        }
+      }
+    }
+
     const user = await this.userModel.findOne({ _id: userId, deletedAt: null });
     if (!user) throw new NotFoundException('User not found');
     
@@ -38,6 +55,7 @@ export class UsersService {
     const followerCount = userObj.followers?.length || 0;
     const followingCount = userObj.following?.length || 0;
     
+    let result;
     if (currentUserId && currentUserId !== userId) {
       // Check if current user is following this user
       const currentUser = await this.userModel.findOne({ _id: currentUserId, deletedAt: null }).select('following');
@@ -45,7 +63,7 @@ export class UsersService {
         (id: any) => id.toString() === userId
       ) || false;
       
-      return {
+      result = {
         ...userObj,
         id: userObj._id.toString(),
         _id: userObj._id.toString(),
@@ -53,20 +71,35 @@ export class UsersService {
         followerCount,
         followingCount,
       };
+    } else {
+      result = {
+        ...userObj,
+        id: userObj._id.toString(),
+        _id: userObj._id.toString(),
+        followerCount,
+        followingCount,
+      };
+
+      // Cache the result (TTL: 30 minutes = 1800 seconds) - only cache own profile view
+      await this.redisService.set(cacheKey, JSON.stringify(result), 1800);
     }
     
-    return {
-      ...userObj,
-      id: userObj._id.toString(),
-      _id: userObj._id.toString(),
-      followerCount,
-      followingCount,
-    };
+    return result;
   }
 
   async search(query: string) {
     if (!query || query.trim().length < 2) {
       return [];
+    }
+
+    // Normalize query for cache key
+    const normalizedQuery = query.trim().toLowerCase();
+    const cacheKey = `search:users:${normalizedQuery}`;
+
+    // Try to get from cache first
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
     }
 
     // Sanitize input to prevent regex injection
@@ -91,10 +124,15 @@ export class UsersService {
       console.log('✅ Bulunan kullanıcı sayısı:', users.length);
 
       // ID'leri string'e çevir ve format dönüştür
-      return users.map(user => ({
+      const result = users.map(user => ({
         ...user,
         id: user._id.toString(),
       }));
+
+      // Cache the result (TTL: 5 minutes = 300 seconds)
+      await this.redisService.set(cacheKey, JSON.stringify(result), 300);
+
+      return result;
     } catch (error) {
       console.error('❌ Arama hatası:', error);
       return [];
@@ -146,6 +184,9 @@ export class UsersService {
       { $addToSet: { followers: currentUserId } }
     );
 
+    // Invalidate feed cache for the current user (their feed will change)
+    await this.invalidateFeedCache(currentUserId);
+
     return { message: 'Followed successfully' };
   }
 
@@ -158,6 +199,10 @@ export class UsersService {
       { _id: userId },
       { $pull: { followers: currentUserId } }
     );
+
+    // Invalidate feed cache for the current user (their feed will change)
+    await this.invalidateFeedCache(currentUserId);
+
     return { message: 'Unfollowed successfully' };
   }
 
@@ -192,13 +237,18 @@ export class UsersService {
     if (!updatedUser) throw new NotFoundException('User not found');
     
     const userObj = updatedUser.toObject();
-    return {
+    const result = {
       ...userObj,
       id: userObj._id.toString(),
       _id: userObj._id.toString(),
       followerCount: userObj.followers?.length || 0,
       followingCount: userObj.following?.length || 0,
     };
+
+    // Invalidate user profile cache
+    await this.redisService.del(`user:${userId}`);
+
+    return result;
   }
 
   async getBlockedUsers(userId: string) {
@@ -446,6 +496,26 @@ export class UsersService {
     );
     console.log('  ✅ Kullanıcı hesabı soft delete yapıldı');
 
+    // Invalidate feed cache (user's feed cache will be removed via TTL, but also clear it explicitly)
+    await this.invalidateFeedCache(userId);
+
+    // Invalidate user profile cache
+    await this.redisService.del(`user:${userId}`);
+
     return { message: 'Account deleted successfully' };
+  }
+
+  // Helper method to invalidate feed cache
+  private async invalidateFeedCache(userId: string): Promise<void> {
+    try {
+      // Get all feed cache keys for this user
+      const keys = await this.redisService.keys(`feed:${userId}:*`);
+      if (keys.length > 0) {
+        await this.redisService.mdel(keys);
+      }
+    } catch (error) {
+      // Log error but don't throw - cache invalidation should not break the flow
+      console.error('Error invalidating feed cache:', error);
+    }
   }
 }

@@ -63,6 +63,24 @@ export declare const AdSchema: import("mongoose").Schema<Ad, import("mongoose").
     }, "id"> & {
         id: string;
     }> | undefined;
+    description?: import("mongoose").SchemaDefinitionProperty<string, Ad, Document<unknown, {}, Ad, {
+        id: string;
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Ad & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    status?: import("mongoose").SchemaDefinitionProperty<AdStatus, Ad, Document<unknown, {}, Ad, {
+        id: string;
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Ad & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
     title?: import("mongoose").SchemaDefinitionProperty<string, Ad, Document<unknown, {}, Ad, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Ad & Required<{
@@ -82,24 +100,6 @@ export declare const AdSchema: import("mongoose").Schema<Ad, import("mongoose").
         id: string;
     }> | undefined;
     linkUrl?: import("mongoose").SchemaDefinitionProperty<string, Ad, Document<unknown, {}, Ad, {
-        id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Ad & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
-    description?: import("mongoose").SchemaDefinitionProperty<string, Ad, Document<unknown, {}, Ad, {
-        id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Ad & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
-    status?: import("mongoose").SchemaDefinitionProperty<AdStatus, Ad, Document<unknown, {}, Ad, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Ad & Required<{
         _id: import("mongoose").Types.ObjectId;

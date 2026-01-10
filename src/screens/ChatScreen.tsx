@@ -101,9 +101,22 @@ export const ChatScreen: React.FC = () => {
       console.log('📥 Mesajlar yükleniyor, conversationId:', convId);
       const response = await messageService.getMessages(convId);
       const messagesData = response.messages || response; // Backward compatibility
-      // Backend'den zaten chronological order'da geliyor (en eski en üstte, en yeni en altta)
-      setMessages(Array.isArray(messagesData) ? messagesData : []);
-      console.log('✅ Mesajlar yüklendi:', messagesData.length);
+      
+      // Backend'den gelen mesajları normalize et
+      const normalizedMessages = Array.isArray(messagesData) ? messagesData.map((msg: any) => ({
+        id: msg._id || msg.id,
+        _id: msg._id || msg.id,
+        conversationId: msg.conversationId || convId,
+        senderId: String(msg.senderId || ''),
+        receiverId: String(msg.receiverId || ''),
+        text: msg.text || '',
+        read: msg.read || false,
+        createdAt: msg.createdAt,
+        sender: msg.sender,
+      })) : [];
+      
+      setMessages(normalizedMessages);
+      console.log('✅ Mesajlar yüklendi ve normalize edildi:', normalizedMessages.length);
       
       // Mesajlar yüklendikten sonra okundu işaretle
       await markMessagesAsRead(convId);
@@ -158,8 +171,8 @@ export const ChatScreen: React.FC = () => {
           id: response._id?.toString() || response.id?.toString() || '',
           _id: response._id?.toString() || response.id?.toString() || '',
           conversationId: response.conversationId || activeConversationId || '',
-          senderId: currentUserId, // Kendi ID'mizi kullan
-          receiverId: targetReceiverId,
+          senderId: response.senderId || currentUserId, // Backend'den gelen senderId'yi kullan
+          receiverId: response.receiverId || targetReceiverId,
           text: response.text || text,
           read: response.read || false,
           createdAt: response.createdAt || new Date().toISOString(),
@@ -195,7 +208,7 @@ export const ChatScreen: React.FC = () => {
   const renderMessage = ({ item }: { item: Message }) => {
     const currentUser = authService.getCurrentUser();
     // currentUserId'yi normalize et - hem _id hem id kontrolü yap
-    const currentUserIdRaw = currentUser?._id || currentUser?.id;
+    const currentUserIdRaw = (currentUser as any)?._id || (currentUser as any)?.id;
     const currentUserId = currentUserIdRaw ? String(currentUserIdRaw).trim() : '';
     
     // senderId'yi normalize et - hem senderId hem sender.id kontrolü yap
@@ -213,21 +226,6 @@ export const ChatScreen: React.FC = () => {
     const isMe = currentUserId !== '' && senderId !== '' && currentUserId === senderId;
     
     const senderAvatar = (item.sender as any)?.avatar || 'https://via.placeholder.com/30';
-    
-    // Debug - sadece ilk render'da log at
-    if (!debugLogged.current) {
-      console.log('🔍 Mesaj render debug:', {
-        currentUserId,
-        senderId,
-        isMe,
-        currentUserIdRaw,
-        senderIdRaw,
-        itemSenderId: item.senderId,
-        itemSender: item.sender,
-        currentUser,
-      });
-      debugLogged.current = true;
-    }
 
     return (
       <View style={[styles.messageContainer, isMe && styles.myMessage]}>

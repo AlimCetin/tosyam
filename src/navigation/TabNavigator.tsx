@@ -18,7 +18,7 @@ export const TabNavigator = () => {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Create') {
             iconName = focused ? 'add-circle' : 'add-circle-outline';
-          } else if (route.name === 'Profile') {
+          } else if (route.name === 'ProfileTab') {
             iconName = focused ? 'person' : 'person-outline';
           } else {
             iconName = 'help-outline';
@@ -28,7 +28,15 @@ export const TabNavigator = () => {
         },
         tabBarActiveTintColor: '#000',
         tabBarInactiveTintColor: '#8e8e8e',
-        headerShown: false,
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: '#fff',
+          borderBottomWidth: 1,
+          borderBottomColor: '#dbdbdb',
+        },
+        headerTitleStyle: {
+          fontWeight: '600',
+        },
         tabBarStyle: {
           borderTopWidth: 1,
           borderTopColor: '#dbdbdb',
@@ -37,15 +45,28 @@ export const TabNavigator = () => {
           paddingTop: 5,
         },
       })}>
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Create" component={CreateScreen} />
+      <Tab.Screen 
+        name="Home" 
+        component={HomeScreen}
+        options={{ title: 'Ana Sayfa' }}
+      />
+      <Tab.Screen 
+        name="Create" 
+        component={CreateScreen}
+        options={{ title: 'Oluştur' }}
+      />
       <Tab.Screen
-        name="Profile"
+        name="ProfileTab"
         component={ProfileScreen}
+        options={{
+          tabBarLabel: 'Profil',
+        }}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
-            // Tab'a tıklandığında her zaman kendi profilini göster
-            navigation.setParams({ userId: 'current-user-id' });
+            // Varsayılan davranışı engelle
+            e.preventDefault();
+            // Stack Navigator'daki Profile ekranına git (header ile)
+            navigation.navigate('Profile', { userId: 'current-user-id' });
           },
         })}
       />

@@ -91,7 +91,10 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="Profile"
           component={ProfileScreen}
-          options={{ title: 'Profil' }}
+          options={({ navigation }) => ({
+            title: 'Profil',
+            headerBackTitleVisible: false,
+          })}
         />
         <Stack.Screen
           name="FollowList"

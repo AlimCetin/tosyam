@@ -55,15 +55,6 @@ export declare const AppealSchema: import("mongoose").Schema<Appeal, import("mon
     }, "id"> & {
         id: string;
     }> | undefined;
-    banLogId?: import("mongoose").SchemaDefinitionProperty<string, Appeal, Document<unknown, {}, Appeal, {
-        id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Appeal & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
     reason?: import("mongoose").SchemaDefinitionProperty<string, Appeal, Document<unknown, {}, Appeal, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Appeal & Required<{
@@ -92,6 +83,15 @@ export declare const AppealSchema: import("mongoose").Schema<Appeal, import("mon
         id: string;
     }> | undefined;
     reviewedAt?: import("mongoose").SchemaDefinitionProperty<Date, Appeal, Document<unknown, {}, Appeal, {
+        id: string;
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Appeal & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    banLogId?: import("mongoose").SchemaDefinitionProperty<string, Appeal, Document<unknown, {}, Appeal, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Appeal & Required<{
         _id: import("mongoose").Types.ObjectId;

@@ -1,12 +1,12 @@
-import { IsString, IsUrl, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength } from 'class-validator';
 
 export class CreatePostDto {
   @IsOptional()
-  @IsUrl({}, { message: 'Image must be a valid URL' })
+  @IsString({ message: 'Image must be a string (base64 or URL)' })
   image?: string;
 
   @IsOptional()
-  @IsUrl({}, { message: 'Video must be a valid URL' })
+  @IsString({ message: 'Video must be a string (base64 or URL)' })
   video?: string;
 
   @IsOptional()

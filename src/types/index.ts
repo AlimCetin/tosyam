@@ -53,12 +53,21 @@ export interface Comment {
 
 export interface Message {
   id: string;
+  _id?: string;
+  conversationId?: string;
   senderId: string;
   receiverId: string;
   text: string;
   image?: string;
   createdAt: string;
   read: boolean;
+  sender?: {
+    id: string;
+    _id?: string;
+    fullName: string;
+    username: string;
+    avatar?: string | null;
+  };
 }
 
 export interface Conversation {
@@ -76,6 +85,8 @@ export interface Notification {
   postId?: string;
   commentId?: string;
   messageId?: string;
+  postOwnerName?: string; // Takipçi bildirimlerinde post sahibinin adı
+  isFollowerNotification?: boolean; // Takipçi bildirimi mi?
   read: boolean;
   createdAt: string;
 }

@@ -17,10 +17,13 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const notification_entity_1 = require("../entities/notification.entity");
+const redis_service_1 = require("../common/redis/redis.service");
 let NotificationsService = class NotificationsService {
     notificationModel;
-    constructor(notificationModel) {
+    redisService;
+    constructor(notificationModel, redisService) {
         this.notificationModel = notificationModel;
+        this.redisService = redisService;
     }
     async getUserNotifications(userId, page = 1, limit = 20) {
         const skip = (page - 1) * limit;
@@ -30,7 +33,7 @@ let NotificationsService = class NotificationsService {
             deletedAt: null,
         })
             .populate('fromUserId', 'fullName avatar')
-            .select('fromUserId postId type read createdAt')
+            .select('fromUserId postId type read createdAt postOwnerName isFollowerNotification')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(maxLimit)
@@ -63,6 +66,8 @@ let NotificationsService = class NotificationsService {
                         avatar: fromUserData.avatar || null,
                     },
                     postId: notification.postId ? notification.postId.toString() : null,
+                    postOwnerName: notification.postOwnerName || null,
+                    isFollowerNotification: notification.isFollowerNotification || false,
                     read: notification.read || false,
                     createdAt: notification.createdAt,
                 };
@@ -75,23 +80,65 @@ let NotificationsService = class NotificationsService {
         };
     }
     async markAsRead(notificationId, userId) {
-        await this.notificationModel.updateOne({ _id: notificationId, userId, deletedAt: null }, { read: true });
+        const notification = await this.notificationModel.findOne({
+            _id: notificationId,
+            userId,
+            deletedAt: null,
+            read: false,
+        });
+        if (notification) {
+            await this.notificationModel.updateOne({ _id: notificationId, userId, deletedAt: null }, { read: true });
+            const cacheKey = `notification:unread:${userId}`;
+            const cached = await this.redisService.get(cacheKey);
+            if (cached !== null) {
+                const currentCount = parseInt(cached);
+                if (currentCount > 0) {
+                    await this.redisService.set(cacheKey, (currentCount - 1).toString(), 60);
+                }
+                else {
+                    await this.redisService.del(cacheKey);
+                }
+            }
+        }
     }
     async markAllAsRead(userId) {
         await this.notificationModel.updateMany({ userId, read: false, deletedAt: null }, { read: true });
+        await this.redisService.set(`notification:unread:${userId}`, '0', 60);
     }
     async getUnreadCount(userId) {
-        return await this.notificationModel.countDocuments({
+        const cacheKey = `notification:unread:${userId}`;
+        const cached = await this.redisService.get(cacheKey);
+        if (cached !== null) {
+            return parseInt(cached);
+        }
+        const count = await this.notificationModel.countDocuments({
             userId,
             read: false,
             deletedAt: null,
         });
+        await this.redisService.set(cacheKey, count.toString(), 60);
+        return count;
+    }
+    async incrementUnreadCount(userId) {
+        const cacheKey = `notification:unread:${userId}`;
+        const cached = await this.redisService.get(cacheKey);
+        if (cached !== null) {
+            await this.redisService.incr(cacheKey);
+            await this.redisService.expire(cacheKey, 60);
+        }
+        else {
+            await this.redisService.set(cacheKey, '1', 60);
+        }
+    }
+    async invalidateUnreadCount(userId) {
+        await this.redisService.del(`notification:unread:${userId}`);
     }
 };
 exports.NotificationsService = NotificationsService;
 exports.NotificationsService = NotificationsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(notification_entity_1.Notification.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model])
+    __metadata("design:paramtypes", [mongoose_2.Model,
+        redis_service_1.RedisService])
 ], NotificationsService);
 //# sourceMappingURL=notifications.service.js.map

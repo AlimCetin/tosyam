@@ -14,6 +14,7 @@ import { AdminModule } from './admin/admin.module';
 import { AdsModule } from './ads/ads.module';
 import { AppController } from './app.controller';
 import { AppLoggerService } from './common/logger/logger.service';
+import { RedisModule } from './common/redis/redis.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AppLoggerService } from './common/logger/logger.service';
         }],
       }),
     }),
+    RedisModule,
     DatabaseModule,
     AuthModule,
     UsersModule,

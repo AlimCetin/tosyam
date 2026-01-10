@@ -7,6 +7,7 @@ import { User } from '../entities/user.entity';
 import { UserCredentials } from '../entities/user-credentials.entity';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto/auth.dto';
 import { AppLoggerService } from '../common/logger/logger.service';
+import { RedisService } from '../common/redis/redis.service';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     @Inject(AppLoggerService) private readonly logger: AppLoggerService,
+    private readonly redisService: RedisService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -38,6 +40,14 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user._id.toString());
     
+    // Store refresh token in Redis (TTL: 7 days = 604800 seconds)
+    await this.redisService.set(
+      `refresh_token:${user._id.toString()}`,
+      tokens.refreshToken,
+      604800
+    );
+    
+    // Also update MongoDB for backward compatibility (optional, can be removed later)
     await this.credentialsModel.findOneAndUpdate(
       { userId: user._id },
       { refreshToken: tokens.refreshToken }
@@ -78,6 +88,15 @@ export class AuthService {
     this.logger.log(`User logged in successfully: ${emailLower}`, 'AuthService');
 
     const tokens = await this.generateTokens(user._id.toString());
+    
+    // Store refresh token in Redis (TTL: 7 days = 604800 seconds)
+    await this.redisService.set(
+      `refresh_token:${user._id.toString()}`,
+      tokens.refreshToken,
+      604800
+    );
+    
+    // Also update MongoDB for backward compatibility (optional, can be removed later)
     await this.credentialsModel.findOneAndUpdate(
       { email: emailLower },
       { refreshToken: tokens.refreshToken }
@@ -109,22 +128,20 @@ export class AuthService {
         throw new UnauthorizedException('Invalid or expired refresh token');
       }
 
-      // Check if refresh token exists in database
-      const credentials = await this.credentialsModel
-        .findOne({ userId: payload.id })
-        .select('+refreshToken');
+      // Check if refresh token exists in Redis
+      const storedToken = await this.redisService.get(`refresh_token:${payload.id}`);
       
-      if (!credentials || !credentials.refreshToken) {
+      if (!storedToken) {
         this.logger.securityEvent('Invalid refresh token attempt', {
           userId: payload.id,
-          reason: 'Refresh token not found in database',
+          reason: 'Refresh token not found in Redis',
           timestamp: new Date().toISOString(),
         });
         throw new UnauthorizedException('Refresh token not found');
       }
 
       // Verify refresh token matches
-      if (credentials.refreshToken !== dto.refreshToken) {
+      if (storedToken !== dto.refreshToken) {
         this.logger.securityEvent('Invalid refresh token attempt', {
           userId: payload.id,
           reason: 'Refresh token mismatch',
@@ -136,7 +153,14 @@ export class AuthService {
       // Generate new tokens
       const tokens = await this.generateTokens(payload.id);
       
-      // Update refresh token in database
+      // Update refresh token in Redis (TTL: 7 days = 604800 seconds)
+      await this.redisService.set(
+        `refresh_token:${payload.id}`,
+        tokens.refreshToken,
+        604800
+      );
+      
+      // Also update MongoDB for backward compatibility (optional, can be removed later)
       await this.credentialsModel.findOneAndUpdate(
         { userId: payload.id },
         { refreshToken: tokens.refreshToken }
@@ -215,5 +239,19 @@ export class AuthService {
     });
 
     return { message: 'Password changed successfully' };
+  }
+
+  async logout(userId: string): Promise<{ message: string }> {
+    // Delete refresh token from Redis
+    await this.redisService.del(`refresh_token:${userId}`);
+    
+    // Also clear from MongoDB for backward compatibility (optional)
+    await this.credentialsModel.findOneAndUpdate(
+      { userId },
+      { $unset: { refreshToken: 1 } }
+    );
+
+    this.logger.log(`User logged out: ${userId}`, 'AuthService');
+    return { message: 'Logged out successfully' };
   }
 }

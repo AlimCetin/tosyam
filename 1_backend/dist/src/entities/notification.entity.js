@@ -17,6 +17,8 @@ let Notification = class Notification extends mongoose_2.Document {
     fromUserId;
     type;
     postId;
+    postOwnerName;
+    isFollowerNotification;
     read;
     deletedAt;
 };
@@ -37,6 +39,14 @@ __decorate([
     (0, mongoose_1.Prop)({ type: String, ref: 'Post' }),
     __metadata("design:type", String)
 ], Notification.prototype, "postId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, default: null }),
+    __metadata("design:type", String)
+], Notification.prototype, "postOwnerName", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: false }),
+    __metadata("design:type", Boolean)
+], Notification.prototype, "isFollowerNotification", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ default: false }),
     __metadata("design:type", Boolean)

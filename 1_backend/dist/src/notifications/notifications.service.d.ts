@@ -1,8 +1,10 @@
 import { Model } from 'mongoose';
 import { Notification } from '../entities/notification.entity';
+import { RedisService } from '../common/redis/redis.service';
 export declare class NotificationsService {
     private notificationModel;
-    constructor(notificationModel: Model<Notification>);
+    private readonly redisService;
+    constructor(notificationModel: Model<Notification>, redisService: RedisService);
     getUserNotifications(userId: string, page?: number, limit?: number): Promise<{
         notifications: {
             id: any;
@@ -14,6 +16,8 @@ export declare class NotificationsService {
                 avatar: any;
             };
             postId: any;
+            postOwnerName: any;
+            isFollowerNotification: any;
             read: any;
             createdAt: any;
         }[];
@@ -26,4 +30,6 @@ export declare class NotificationsService {
     markAsRead(notificationId: string, userId: string): Promise<void>;
     markAllAsRead(userId: string): Promise<void>;
     getUnreadCount(userId: string): Promise<number>;
+    incrementUnreadCount(userId: string): Promise<void>;
+    invalidateUnreadCount(userId: string): Promise<void>;
 }

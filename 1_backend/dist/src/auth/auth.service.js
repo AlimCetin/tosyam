@@ -21,18 +21,21 @@ const mongoose_2 = require("mongoose");
 const user_entity_1 = require("../entities/user.entity");
 const user_credentials_entity_1 = require("../entities/user-credentials.entity");
 const logger_service_1 = require("../common/logger/logger.service");
+const redis_service_1 = require("../common/redis/redis.service");
 let AuthService = class AuthService {
     userModel;
     credentialsModel;
     jwtService;
     configService;
     logger;
-    constructor(userModel, credentialsModel, jwtService, configService, logger) {
+    redisService;
+    constructor(userModel, credentialsModel, jwtService, configService, logger, redisService) {
         this.userModel = userModel;
         this.credentialsModel = credentialsModel;
         this.jwtService = jwtService;
         this.configService = configService;
         this.logger = logger;
+        this.redisService = redisService;
     }
     async register(dto) {
         const emailLower = dto.email.toLowerCase().trim();
@@ -48,6 +51,7 @@ let AuthService = class AuthService {
             password: dto.password,
         });
         const tokens = await this.generateTokens(user._id.toString());
+        await this.redisService.set(`refresh_token:${user._id.toString()}`, tokens.refreshToken, 604800);
         await this.credentialsModel.findOneAndUpdate({ userId: user._id }, { refreshToken: tokens.refreshToken });
         return { ...tokens, user: this.sanitizeUser(user) };
     }
@@ -75,6 +79,7 @@ let AuthService = class AuthService {
         }
         this.logger.log(`User logged in successfully: ${emailLower}`, 'AuthService');
         const tokens = await this.generateTokens(user._id.toString());
+        await this.redisService.set(`refresh_token:${user._id.toString()}`, tokens.refreshToken, 604800);
         await this.credentialsModel.findOneAndUpdate({ email: emailLower }, { refreshToken: tokens.refreshToken });
         return { ...tokens, user: this.sanitizeUser(user) };
     }
@@ -98,18 +103,16 @@ let AuthService = class AuthService {
                 });
                 throw new common_1.UnauthorizedException('Invalid or expired refresh token');
             }
-            const credentials = await this.credentialsModel
-                .findOne({ userId: payload.id })
-                .select('+refreshToken');
-            if (!credentials || !credentials.refreshToken) {
+            const storedToken = await this.redisService.get(`refresh_token:${payload.id}`);
+            if (!storedToken) {
                 this.logger.securityEvent('Invalid refresh token attempt', {
                     userId: payload.id,
-                    reason: 'Refresh token not found in database',
+                    reason: 'Refresh token not found in Redis',
                     timestamp: new Date().toISOString(),
                 });
                 throw new common_1.UnauthorizedException('Refresh token not found');
             }
-            if (credentials.refreshToken !== dto.refreshToken) {
+            if (storedToken !== dto.refreshToken) {
                 this.logger.securityEvent('Invalid refresh token attempt', {
                     userId: payload.id,
                     reason: 'Refresh token mismatch',
@@ -118,6 +121,7 @@ let AuthService = class AuthService {
                 throw new common_1.UnauthorizedException('Refresh token mismatch');
             }
             const tokens = await this.generateTokens(payload.id);
+            await this.redisService.set(`refresh_token:${payload.id}`, tokens.refreshToken, 604800);
             await this.credentialsModel.findOneAndUpdate({ userId: payload.id }, { refreshToken: tokens.refreshToken });
             return tokens;
         }
@@ -176,6 +180,12 @@ let AuthService = class AuthService {
         });
         return { message: 'Password changed successfully' };
     }
+    async logout(userId) {
+        await this.redisService.del(`refresh_token:${userId}`);
+        await this.credentialsModel.findOneAndUpdate({ userId }, { $unset: { refreshToken: 1 } });
+        this.logger.log(`User logged out: ${userId}`, 'AuthService');
+        return { message: 'Logged out successfully' };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
@@ -187,6 +197,7 @@ exports.AuthService = AuthService = __decorate([
         mongoose_2.Model,
         jwt_1.JwtService,
         config_1.ConfigService,
-        logger_service_1.AppLoggerService])
+        logger_service_1.AppLoggerService,
+        redis_service_1.RedisService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

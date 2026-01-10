@@ -15,7 +15,6 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { PostCard } from '../components/PostCard';
 import { AdCard } from '../components/AdCard';
-import { StoryItem } from '../components/StoryItem';
 import { postService } from '../services/postService';
 import { notificationService } from '../services/notificationService';
 import { messageService } from '../services/messageService';
@@ -230,10 +229,6 @@ export const HomeScreen: React.FC = () => {
     navigation.navigate('Search');
   };
 
-  const stories = [
-    { id: '1', username: 'Senin Hikayen', avatar: '', hasNewStories: true },
-  ];
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -279,25 +274,6 @@ export const HomeScreen: React.FC = () => {
         </View>
       </View>
       <FlatList
-        ListHeaderComponent={
-          <View style={styles.storiesContainer}>
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={stories}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <StoryItem
-                  username={item.username}
-                  avatar={item.avatar}
-                  hasNewStories={item.hasNewStories}
-                  onPress={() => {}}
-                />
-              )}
-              contentContainerStyle={styles.storiesList}
-            />
-          </View>
-        }
         data={posts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
@@ -380,15 +356,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: '700',
-  },
-  storiesContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#dbdbdb',
-    marginBottom: 10,
-  },
-  storiesList: {
-    paddingHorizontal: 10,
   },
 });

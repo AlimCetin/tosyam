@@ -76,6 +76,15 @@ export declare const ReportSchema: import("mongoose").Schema<Report, import("mon
     }, "id"> & {
         id: string;
     }> | undefined;
+    description?: import("mongoose").SchemaDefinitionProperty<string, Report, Document<unknown, {}, Report, {
+        id: string;
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Report & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
     reporterId?: import("mongoose").SchemaDefinitionProperty<string, Report, Document<unknown, {}, Report, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Report & Required<{
@@ -95,15 +104,6 @@ export declare const ReportSchema: import("mongoose").Schema<Report, import("mon
         id: string;
     }> | undefined;
     reason?: import("mongoose").SchemaDefinitionProperty<ReportReason, Report, Document<unknown, {}, Report, {
-        id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Report & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
-    description?: import("mongoose").SchemaDefinitionProperty<string, Report, Document<unknown, {}, Report, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Report & Required<{
         _id: import("mongoose").Types.ObjectId;

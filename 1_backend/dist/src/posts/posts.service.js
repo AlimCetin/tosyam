@@ -22,24 +22,27 @@ const comment_entity_1 = require("../entities/comment.entity");
 const notification_entity_1 = require("../entities/notification.entity");
 const user_entity_1 = require("../entities/user.entity");
 const ad_entity_1 = require("../entities/ad.entity");
+const redis_service_1 = require("../common/redis/redis.service");
 let PostsService = class PostsService {
     postModel;
     commentModel;
     notificationModel;
     userModel;
     adModel;
-    constructor(postModel, commentModel, notificationModel, userModel, adModel) {
+    redisService;
+    constructor(postModel, commentModel, notificationModel, userModel, adModel, redisService) {
         this.postModel = postModel;
         this.commentModel = commentModel;
         this.notificationModel = notificationModel;
         this.userModel = userModel;
         this.adModel = adModel;
+        this.redisService = redisService;
     }
     async create(userId, image, caption, isPrivate = false, hiddenFromFollowers = [], video) {
         if (!image && !video) {
             throw new common_1.BadRequestException('Either image or video is required');
         }
-        return this.postModel.create({
+        const post = await this.postModel.create({
             userId,
             image: image || '',
             video: video || undefined,
@@ -47,6 +50,8 @@ let PostsService = class PostsService {
             isPrivate: isPrivate || false,
             hiddenFromFollowers: hiddenFromFollowers || [],
         });
+        await this.invalidateFeedCache(userId);
+        return post;
     }
     async getLikes(postId, currentUserId, page = 1, limit = 20) {
         if (!mongoose_3.Types.ObjectId.isValid(postId)) {
@@ -118,6 +123,11 @@ let PostsService = class PostsService {
         };
     }
     async getFeed(userId, page = 1, limit = 20) {
+        const cacheKey = `feed:${userId}:${page}:${limit}`;
+        const cached = await this.redisService.get(cacheKey);
+        if (cached) {
+            return JSON.parse(cached);
+        }
         const user = await this.userModel.findOne({ _id: userId, deletedAt: null }).select('following blockedUsers savedPosts role');
         if (!user)
             throw new common_1.NotFoundException('User not found');
@@ -226,7 +236,7 @@ let PostsService = class PostsService {
                 adIndex++;
             }
         }
-        return {
+        const feedResult = {
             posts: result,
             pagination: {
                 page,
@@ -234,6 +244,19 @@ let PostsService = class PostsService {
                 hasMore: posts.length === maxLimit,
             },
         };
+        await this.redisService.set(cacheKey, JSON.stringify(feedResult), 300);
+        return feedResult;
+    }
+    async invalidateFeedCache(userId) {
+        try {
+            const keys = await this.redisService.keys(`feed:${userId}:*`);
+            if (keys.length > 0) {
+                await this.redisService.mdel(keys);
+            }
+        }
+        catch (error) {
+            console.error('Error invalidating feed cache:', error);
+        }
     }
     async getUserPosts(userId, currentUserId, page = 1, limit = 20) {
         if (!mongoose_3.Types.ObjectId.isValid(userId)) {
@@ -424,6 +447,15 @@ let PostsService = class PostsService {
                     type: 'like',
                     postId: postId,
                 });
+                const cacheKey = `notification:unread:${postOwnerId}`;
+                const cached = await this.redisService.get(cacheKey);
+                if (cached !== null) {
+                    await this.redisService.incr(cacheKey);
+                    await this.redisService.expire(cacheKey, 60);
+                }
+                else {
+                    await this.redisService.set(cacheKey, '1', 60);
+                }
             }
             return { message: 'Liked' };
         }
@@ -501,6 +533,15 @@ let PostsService = class PostsService {
                 type: 'comment',
                 postId: postId,
             });
+            const cacheKey = `notification:unread:${postOwnerId}`;
+            const cached = await this.redisService.get(cacheKey);
+            if (cached !== null) {
+                await this.redisService.incr(cacheKey);
+                await this.redisService.expire(cacheKey, 60);
+            }
+            else {
+                await this.redisService.set(cacheKey, '1', 60);
+            }
         }
         const populatedComment = await comment.populate('userId', 'fullName avatar');
         const populatedUserId = populatedComment.userId._id || populatedComment.userId;
@@ -567,6 +608,7 @@ let PostsService = class PostsService {
         await this.notificationModel.updateMany({ postId, deletedAt: null }, { $set: { deletedAt: new Date() } });
         await this.userModel.updateMany({ savedPosts: postId }, { $pull: { savedPosts: postId } });
         await this.postModel.updateOne({ _id: postId }, { $set: { deletedAt: new Date() } });
+        await this.invalidateFeedCache(userId);
         return { message: 'Post deleted successfully' };
     }
     async updateVisibility(postId, userId, payload) {
@@ -622,6 +664,7 @@ exports.PostsService = PostsService = __decorate([
         mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
-        mongoose_2.Model])
+        mongoose_2.Model,
+        redis_service_1.RedisService])
 ], PostsService);
 //# sourceMappingURL=posts.service.js.map

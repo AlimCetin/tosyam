@@ -8,6 +8,7 @@ import {
   FlatList,
   StyleSheet,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -41,7 +42,7 @@ export const ProfileScreen: React.FC = () => {
   const loadProfile = async (userId: string) => {
     try {
       // Mevcut kullanıcıyı al
-      const currentUser = authService.getCurrentUser();
+      const currentUser = authService.getCurrentUser() as any;
       const currentUserId = currentUser?._id || currentUser?.id;
       
       // userId 'current-user-id' veya 'me' ise mevcut kullanıcıyı al
@@ -59,20 +60,20 @@ export const ProfileScreen: React.FC = () => {
       }));
       
       console.log('👤 Backend\'den gelen user data:', {
-        id: userData._id || userData.id,
+        id: (userData as any)._id || userData.id,
         followerCount: userData.followerCount,
         followingCount: userData.followingCount,
         isFollowing: userData.isFollowing,
-        followers: userData.followers?.length,
-        following: userData.following?.length,
+        followers: (userData as any).followers?.length,
+        following: (userData as any).following?.length,
       });
       
       // Backend'den gelen user objesini normalize et (_id -> id)
       const normalizedUser: User = {
         ...userData,
-        id: userData._id || userData.id,
-        followerCount: userData.followerCount ?? (userData.followers?.length || 0),
-        followingCount: userData.followingCount ?? (userData.following?.length || 0),
+        id: (userData as any)._id || userData.id,
+        followerCount: userData.followerCount ?? ((userData as any).followers?.length || 0),
+        followingCount: userData.followingCount ?? ((userData as any).following?.length || 0),
         isFollowing: userData.isFollowing ?? false,
       };
       
@@ -140,125 +141,129 @@ export const ProfileScreen: React.FC = () => {
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.profileHeader}>
-          <Image
-            source={{ uri: user.avatar || 'https://via.placeholder.com/90' }}
-            style={styles.avatar}
-          />
-          <View style={styles.stats}>
-            <View style={styles.stat}>
-              <Text style={styles.statNumber}>{posts.length}</Text>
-              <Text style={styles.statLabel}>Gönderi</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.stat}
-              onPress={() => {
-                // Kendi profiliyse her zaman göster
-                if (isOwnProfile) {
-                  const targetUserId = user.id === 'current-user-id' || user.id === 'me' 
-                    ? 'current-user-id' 
-                    : user.id;
-                  navigation.navigate('FollowList', { userId: targetUserId, type: 'followers' });
-                  return;
-                }
-                
-                // Başkasının profili ve gizliyse
-                if (user.hideFollowers) {
-                  Alert.alert('Gizli', 'Bu kullanıcı takipçi listesini gizlemiş');
-                  return;
-                }
-                
-                const targetUserId = user.id;
-                navigation.navigate('FollowList', { userId: targetUserId, type: 'followers' });
-              }}>
-              <Text style={styles.statNumber}>
-                {!isOwnProfile && user.hideFollowers ? '—' : (user.followerCount ?? 0)}
-              </Text>
-              <Text style={styles.statLabel}>Takipçi</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.stat}
-              onPress={() => {
-                // Kendi profiliyse her zaman göster
-                if (isOwnProfile) {
-                  const targetUserId = user.id === 'current-user-id' || user.id === 'me' 
-                    ? 'current-user-id' 
-                    : user.id;
-                  navigation.navigate('FollowList', { userId: targetUserId, type: 'following' });
-                  return;
-                }
-                
-                // Başkasının profili ve gizliyse
-                if (user.hideFollowing) {
-                  Alert.alert('Gizli', 'Bu kullanıcı takip edilen listesini gizlemiş');
-                  return;
-                }
-                
-                const targetUserId = user.id;
-                navigation.navigate('FollowList', { userId: targetUserId, type: 'following' });
-              }}>
-              <Text style={styles.statNumber}>
-                {!isOwnProfile && user.hideFollowing ? '—' : (user.followingCount ?? 0)}
-              </Text>
-              <Text style={styles.statLabel}>Takip</Text>
-            </TouchableOpacity>
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.profileHeader}>
+        <Image
+          source={{ uri: user.avatar || 'https://via.placeholder.com/90' }}
+          style={styles.avatar}
+        />
+        <View style={styles.stats}>
+          <View style={styles.stat}>
+            <Text style={styles.statNumber}>{posts.length}</Text>
+            <Text style={styles.statLabel}>Gönderi</Text>
           </View>
-        </View>
-
-        <View style={styles.info}>
-          <Text style={styles.fullName}>{user.fullName}</Text>
-          {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
-        </View>
-
-        <View style={styles.actions}>
-          {isOwnProfile ? (
-            // Kendi profili - Düzenle ve Ayarlar butonları
-            <>
-              <TouchableOpacity
-                style={[styles.button, styles.editButton]}
-                onPress={handleEditProfile}>
-                <Text style={[styles.buttonText, { color: '#000' }]}>Profili Düzenle</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.settingsButton}
-                onPress={handleSettings}>
-                <Icon name="settings-outline" size={20} color="#000" />
-              </TouchableOpacity>
-            </>
-          ) : (
-            // Başkasının profili - Takip ve Mesaj butonları
-            <>
-              <TouchableOpacity
-                style={[styles.button, user.isFollowing && styles.following]}
-                onPress={handleFollow}>
-                <Text style={[styles.buttonText, user.isFollowing && styles.buttonTextSecondary]}>
-                  {user.isFollowing ? 'Takipten Çık' : 'Takip Et'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.secondary]}
-                onPress={() => navigation.navigate('Chat', { receiverId: user.id })}>
-                <Text style={[styles.buttonText, { color: '#000' }]}>Mesaj</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.moreButton}
-                onPress={() => {
-                  navigation.navigate('ProfileMenu', { userId: user.id });
-                }}>
-                <Icon name="ellipsis-horizontal" size={20} />
-              </TouchableOpacity>
-            </>
-          )}
+          <TouchableOpacity
+            style={styles.stat}
+            onPress={() => {
+              // Kendi profiliyse her zaman göster
+              if (isOwnProfile) {
+                const targetUserId = user.id === 'current-user-id' || user.id === 'me' 
+                  ? 'current-user-id' 
+                  : user.id;
+                navigation.navigate('FollowList', { userId: targetUserId, type: 'followers' });
+                return;
+              }
+              
+              // Başkasının profili ve gizliyse
+              if (user.hideFollowers) {
+                Alert.alert('Gizli', 'Bu kullanıcı takipçi listesini gizlemiş');
+                return;
+              }
+              
+              const targetUserId = user.id;
+              navigation.navigate('FollowList', { userId: targetUserId, type: 'followers' });
+            }}>
+            <Text style={styles.statNumber}>
+              {!isOwnProfile && user.hideFollowers ? '—' : (user.followerCount ?? 0)}
+            </Text>
+            <Text style={styles.statLabel}>Takipçi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.stat}
+            onPress={() => {
+              // Kendi profiliyse her zaman göster
+              if (isOwnProfile) {
+                const targetUserId = user.id === 'current-user-id' || user.id === 'me' 
+                  ? 'current-user-id' 
+                  : user.id;
+                navigation.navigate('FollowList', { userId: targetUserId, type: 'following' });
+                return;
+              }
+              
+              // Başkasının profili ve gizliyse
+              if (user.hideFollowing) {
+                Alert.alert('Gizli', 'Bu kullanıcı takip edilen listesini gizlemiş');
+                return;
+              }
+              
+              const targetUserId = user.id;
+              navigation.navigate('FollowList', { userId: targetUserId, type: 'following' });
+            }}>
+            <Text style={styles.statNumber}>
+              {!isOwnProfile && user.hideFollowing ? '—' : (user.followingCount ?? 0)}
+            </Text>
+            <Text style={styles.statLabel}>Takip</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
+      <View style={styles.info}>
+        <Text style={styles.fullName}>{user.fullName}</Text>
+        {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
+      </View>
+
+      <View style={styles.actions}>
+        {isOwnProfile ? (
+          // Kendi profili - Düzenle ve Ayarlar butonları
+          <>
+            <TouchableOpacity
+              style={[styles.button, styles.editButton]}
+              onPress={handleEditProfile}>
+              <Text style={[styles.buttonText, { color: '#000' }]}>Profili Düzenle</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={handleSettings}>
+              <Icon name="settings-outline" size={20} color="#000" />
+            </TouchableOpacity>
+          </>
+        ) : (
+          // Başkasının profili - Takip ve Mesaj butonları
+          <>
+            <TouchableOpacity
+              style={[styles.button, user.isFollowing && styles.following]}
+              onPress={handleFollow}>
+              <Text style={[styles.buttonText, user.isFollowing && styles.buttonTextSecondary]}>
+                {user.isFollowing ? 'Takipten Çık' : 'Takip Et'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.secondary]}
+              onPress={() => navigation.navigate('Chat', { receiverId: user.id })}>
+              <Text style={[styles.buttonText, { color: '#000' }]}>Mesaj</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.moreButton}
+              onPress={() => {
+                navigation.navigate('ProfileMenu', { userId: user.id });
+              }}>
+              <Icon name="ellipsis-horizontal" size={20} />
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
       <FlatList
         data={posts}
         numColumns={3}
         keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={{ paddingBottom: 20 }}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.postThumb}
@@ -273,7 +278,7 @@ export const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -283,47 +288,57 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   header: {
-    padding: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#dbdbdb',
+    borderBottomColor: '#efefef',
   },
   profileHeader: {
     flexDirection: 'row',
     marginBottom: 12,
+    alignItems: 'center',
   },
   avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    marginRight: 20,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    marginRight: 24,
   },
   stats: {
     flexDirection: 'row',
     flex: 1,
-    justifyContent: 'space-around',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
   },
   stat: {
     alignItems: 'center',
+    minWidth: 60,
   },
   statNumber: {
     fontWeight: '600',
-    fontSize: 18,
+    fontSize: 16,
+    color: '#262626',
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#8e8e8e',
+    marginTop: 2,
   },
   info: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   fullName: {
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 14,
-    marginBottom: 4,
+    marginBottom: 2,
+    color: '#000',
   },
   bio: {
     fontSize: 14,
+    color: '#262626',
+    lineHeight: 18,
   },
   actions: {
     flexDirection: 'row',
@@ -333,18 +348,24 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     backgroundColor: '#0095f6',
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 6,
+    borderRadius: 8,
     alignItems: 'center',
   },
   editButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#efefef',
+    borderWidth: 1,
+    borderColor: '#dbdbdb',
   },
   following: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#efefef',
+    borderWidth: 1,
+    borderColor: '#dbdbdb',
   },
   secondary: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#efefef',
+    borderWidth: 1,
+    borderColor: '#dbdbdb',
   },
   buttonText: {
     color: '#fff',
@@ -355,23 +376,30 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   settingsButton: {
-    padding: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 6,
+    backgroundColor: '#efefef',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dbdbdb',
   },
   moreButton: {
-    padding: 8,
+    padding: 6,
+    backgroundColor: '#efefef',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dbdbdb',
     justifyContent: 'center',
     alignItems: 'center',
+    minWidth: 32,
   },
   postThumb: {
-    flex: 1,
+    width: '33.33%',
     aspectRatio: 1,
-    margin: 1,
+    padding: 1,
   },
   thumbImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#efefef',
   },
 });

@@ -57,12 +57,14 @@ export const EditProfileScreen: React.FC = () => {
       cropping: true,
       cropperCircleOverlay: true,
       compressImageQuality: 0.8,
-      includeBase64: false,
+      includeBase64: true, // Base64 formatında al
     })
       .then((image) => {
-        if (image.path) {
-          setSelectedImage(image.path);
-          setAvatarUri(image.path);
+        if (image.data) {
+          // Base64 string olarak kaydet (data:image/jpeg;base64,... formatında)
+          const base64Image = `data:${image.mime};base64,${image.data}`;
+          setSelectedImage(base64Image);
+          setAvatarUri(base64Image);
         }
       })
       .catch((error) => {

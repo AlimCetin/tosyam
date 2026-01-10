@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
 import { Notification } from '../entities/notification.entity';
+import { RedisService } from '../common/redis/redis.service';
 
 @Injectable()
 export class MessagesService {
@@ -11,6 +12,7 @@ export class MessagesService {
     @InjectModel(Conversation.name) private conversationModel: Model<Conversation>,
     @InjectModel(Message.name) private messageModel: Model<Message>,
     @InjectModel(Notification.name) private notificationModel: Model<Notification>,
+    private readonly redisService: RedisService,
   ) {}
 
   async getConversations(userId: string, page: number = 1, limit: number = 20) {
@@ -229,6 +231,19 @@ export class MessagesService {
       // postId yok - mesaj bildirimleri için gerekli değil
     });
 
+    // Increment notification count cache
+    const cacheKey = `notification:unread:${receiverId}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached !== null) {
+      await this.redisService.incr(cacheKey);
+      await this.redisService.expire(cacheKey, 60);
+    } else {
+      await this.redisService.set(cacheKey, '1', 60);
+    }
+
+    // Invalidate message unread count cache for receiver
+    await this.redisService.del(`messages:unread:${receiverId}`);
+
     const populatedMessage = await message.populate('senderId', 'email fullName avatar');
     const msgObj = populatedMessage.toObject() as any;
     const sender = msgObj.senderId as any;
@@ -289,11 +304,22 @@ export class MessagesService {
       userId,
       modifiedCount: result.modifiedCount,
     });
+
+    // Invalidate message unread count cache
+    await this.redisService.del(`messages:unread:${userId}`);
     
     return { modifiedCount: result.modifiedCount };
   }
 
   async getUnreadMessagesCount(userId: string): Promise<number> {
+    const cacheKey = `messages:unread:${userId}`;
+
+    // Try to get from cache first
+    const cached = await this.redisService.get(cacheKey);
+    if (cached !== null) {
+      return parseInt(cached);
+    }
+
     // Okunmamış mesajı olan conversation sayısını hesapla (kaç kişiden mesaj var)
     const userIdStr = String(userId).trim();
     
@@ -305,6 +331,7 @@ export class MessagesService {
     const conversationIds = conversations.map((c: any) => c._id.toString());
     
     if (conversationIds.length === 0) {
+      await this.redisService.set(cacheKey, '0', 60);
       return 0;
     }
 
@@ -327,7 +354,12 @@ export class MessagesService {
     });
 
     // Kaç farklı conversation'da okunmamış mesaj var (kaç kişiden mesaj var)
-    return conversationsWithUnread.size;
+    const count = conversationsWithUnread.size;
+
+    // Cache the result (TTL: 1 minute = 60 seconds)
+    await this.redisService.set(cacheKey, count.toString(), 60);
+
+    return count;
   }
 }
 

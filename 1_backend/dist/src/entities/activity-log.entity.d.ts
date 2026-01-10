@@ -50,6 +50,15 @@ export declare const ActivityLogSchema: import("mongoose").Schema<ActivityLog, i
     }, "id"> & {
         id: string;
     }> | undefined;
+    description?: import("mongoose").SchemaDefinitionProperty<string, ActivityLog, Document<unknown, {}, ActivityLog, {
+        id: string;
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<ActivityLog & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
     adminId?: import("mongoose").SchemaDefinitionProperty<string, ActivityLog, Document<unknown, {}, ActivityLog, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<ActivityLog & Required<{
@@ -96,15 +105,6 @@ export declare const ActivityLogSchema: import("mongoose").Schema<ActivityLog, i
         id: string;
     }> | undefined;
     targetAdId?: import("mongoose").SchemaDefinitionProperty<string, ActivityLog, Document<unknown, {}, ActivityLog, {
-        id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<ActivityLog & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
-    description?: import("mongoose").SchemaDefinitionProperty<string, ActivityLog, Document<unknown, {}, ActivityLog, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<ActivityLog & Required<{
         _id: import("mongoose").Types.ObjectId;

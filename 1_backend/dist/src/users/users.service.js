@@ -23,6 +23,7 @@ const comment_entity_1 = require("../entities/comment.entity");
 const conversation_entity_1 = require("../entities/conversation.entity");
 const message_entity_1 = require("../entities/message.entity");
 const notification_entity_1 = require("../entities/notification.entity");
+const redis_service_1 = require("../common/redis/redis.service");
 let UsersService = class UsersService {
     userModel;
     credentialsModel;
@@ -31,7 +32,8 @@ let UsersService = class UsersService {
     conversationModel;
     messageModel;
     notificationModel;
-    constructor(userModel, credentialsModel, postModel, commentModel, conversationModel, messageModel, notificationModel) {
+    redisService;
+    constructor(userModel, credentialsModel, postModel, commentModel, conversationModel, messageModel, notificationModel, redisService) {
         this.userModel = userModel;
         this.credentialsModel = credentialsModel;
         this.postModel = postModel;
@@ -39,8 +41,19 @@ let UsersService = class UsersService {
         this.conversationModel = conversationModel;
         this.messageModel = messageModel;
         this.notificationModel = notificationModel;
+        this.redisService = redisService;
     }
     async findById(userId, currentUserId) {
+        const cacheKey = `user:${userId}`;
+        if (!currentUserId || currentUserId === userId) {
+            const cached = await this.redisService.get(cacheKey);
+            if (cached) {
+                const cachedUser = JSON.parse(cached);
+                if (!currentUserId || currentUserId === userId) {
+                    return cachedUser;
+                }
+            }
+        }
         const user = await this.userModel.findOne({ _id: userId, deletedAt: null });
         if (!user)
             throw new common_1.NotFoundException('User not found');
@@ -50,10 +63,11 @@ let UsersService = class UsersService {
         const userObj = user.toObject();
         const followerCount = userObj.followers?.length || 0;
         const followingCount = userObj.following?.length || 0;
+        let result;
         if (currentUserId && currentUserId !== userId) {
             const currentUser = await this.userModel.findOne({ _id: currentUserId, deletedAt: null }).select('following');
             const isFollowing = currentUser?.following?.some((id) => id.toString() === userId) || false;
-            return {
+            result = {
                 ...userObj,
                 id: userObj._id.toString(),
                 _id: userObj._id.toString(),
@@ -62,17 +76,27 @@ let UsersService = class UsersService {
                 followingCount,
             };
         }
-        return {
-            ...userObj,
-            id: userObj._id.toString(),
-            _id: userObj._id.toString(),
-            followerCount,
-            followingCount,
-        };
+        else {
+            result = {
+                ...userObj,
+                id: userObj._id.toString(),
+                _id: userObj._id.toString(),
+                followerCount,
+                followingCount,
+            };
+            await this.redisService.set(cacheKey, JSON.stringify(result), 1800);
+        }
+        return result;
     }
     async search(query) {
         if (!query || query.trim().length < 2) {
             return [];
+        }
+        const normalizedQuery = query.trim().toLowerCase();
+        const cacheKey = `search:users:${normalizedQuery}`;
+        const cached = await this.redisService.get(cacheKey);
+        if (cached) {
+            return JSON.parse(cached);
         }
         const sanitizedQuery = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         console.log('🔍 Arama yapılıyor:', sanitizedQuery);
@@ -89,10 +113,12 @@ let UsersService = class UsersService {
                 .limit(20)
                 .lean();
             console.log('✅ Bulunan kullanıcı sayısı:', users.length);
-            return users.map(user => ({
+            const result = users.map(user => ({
                 ...user,
                 id: user._id.toString(),
             }));
+            await this.redisService.set(cacheKey, JSON.stringify(result), 300);
+            return result;
         }
         catch (error) {
             console.error('❌ Arama hatası:', error);
@@ -123,11 +149,13 @@ let UsersService = class UsersService {
         }
         await this.userModel.updateOne({ _id: currentUserId }, { $addToSet: { following: userId } });
         await this.userModel.updateOne({ _id: userId }, { $addToSet: { followers: currentUserId } });
+        await this.invalidateFeedCache(currentUserId);
         return { message: 'Followed successfully' };
     }
     async unfollow(userId, currentUserId) {
         await this.userModel.updateOne({ _id: currentUserId }, { $pull: { following: userId } });
         await this.userModel.updateOne({ _id: userId }, { $pull: { followers: currentUserId } });
+        await this.invalidateFeedCache(currentUserId);
         return { message: 'Unfollowed successfully' };
     }
     async block(userId, currentUserId) {
@@ -148,13 +176,15 @@ let UsersService = class UsersService {
         if (!updatedUser)
             throw new common_1.NotFoundException('User not found');
         const userObj = updatedUser.toObject();
-        return {
+        const result = {
             ...userObj,
             id: userObj._id.toString(),
             _id: userObj._id.toString(),
             followerCount: userObj.followers?.length || 0,
             followingCount: userObj.following?.length || 0,
         };
+        await this.redisService.del(`user:${userId}`);
+        return result;
     }
     async getBlockedUsers(userId) {
         const user = await this.userModel.findOne({ _id: userId, deletedAt: null }).populate('blockedUsers');
@@ -294,7 +324,20 @@ let UsersService = class UsersService {
         console.log('  ✅ Kullanıcı kimlik bilgileri silindi');
         await this.userModel.updateOne({ _id: userId }, { $set: { deletedAt } });
         console.log('  ✅ Kullanıcı hesabı soft delete yapıldı');
+        await this.invalidateFeedCache(userId);
+        await this.redisService.del(`user:${userId}`);
         return { message: 'Account deleted successfully' };
+    }
+    async invalidateFeedCache(userId) {
+        try {
+            const keys = await this.redisService.keys(`feed:${userId}:*`);
+            if (keys.length > 0) {
+                await this.redisService.mdel(keys);
+            }
+        }
+        catch (error) {
+            console.error('Error invalidating feed cache:', error);
+        }
     }
 };
 exports.UsersService = UsersService;
@@ -313,6 +356,7 @@ exports.UsersService = UsersService = __decorate([
         mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
-        mongoose_2.Model])
+        mongoose_2.Model,
+        redis_service_1.RedisService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

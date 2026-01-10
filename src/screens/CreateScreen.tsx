@@ -43,11 +43,13 @@ export const CreateScreen: React.FC = () => {
       height: 1000,
       cropping: true,
       compressImageQuality: 0.8,
-      includeBase64: false,
+      includeBase64: true, // Base64 formatında al
     })
       .then((image) => {
-        if (image.path) {
-          setImage(image.path);
+        if (image.data) {
+          // Base64 string olarak kaydet (data:image/jpeg;base64,... formatında)
+          const base64Image = `data:${image.mime};base64,${image.data}`;
+          setImage(base64Image);
         }
       })
       .catch((error) => {
@@ -60,9 +62,19 @@ export const CreateScreen: React.FC = () => {
 
   const pickVideo = () => {
     setImage(null);
-    launchImageLibrary({ mediaType: 'video', videoQuality: 'high', selectionLimit: 1 }, (response) => {
+    launchImageLibrary({ 
+      mediaType: 'video', 
+      videoQuality: 'high', 
+      selectionLimit: 1,
+      includeBase64: true, // Base64 formatında al
+    }, (response) => {
       const asset = response.assets && response.assets[0];
-      if (asset?.uri) {
+      if (asset?.base64) {
+        // Base64 string olarak kaydet
+        const base64Video = `data:video/mp4;base64,${asset.base64}`;
+        setVideo(base64Video);
+      } else if (asset?.uri) {
+        // Fallback: URI kullan
         setVideo(asset.uri);
       }
     });

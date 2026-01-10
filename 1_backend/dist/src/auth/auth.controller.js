@@ -41,6 +41,9 @@ let AuthController = class AuthController {
     async changePassword(dto, user) {
         return this.authService.changePassword(user._id.toString(), dto.currentPassword, dto.newPassword);
     }
+    async logout(user) {
+        return this.authService.logout(user._id.toString());
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
@@ -85,6 +88,14 @@ __decorate([
     __metadata("design:paramtypes", [change_password_dto_1.ChangePasswordDto, user_entity_1.User]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "changePassword", null);
+__decorate([
+    (0, common_1.Post)('logout'),
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [user_entity_1.User]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "logout", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

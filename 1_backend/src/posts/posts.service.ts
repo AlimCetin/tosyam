@@ -7,6 +7,7 @@ import { Comment } from '../entities/comment.entity';
 import { Notification } from '../entities/notification.entity';
 import { User } from '../entities/user.entity';
 import { Ad, AdStatus } from '../entities/ad.entity';
+import { RedisService } from '../common/redis/redis.service';
 
 @Injectable()
 export class PostsService {
@@ -16,6 +17,7 @@ export class PostsService {
     @InjectModel(Notification.name) private notificationModel: Model<Notification>,
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Ad.name) private adModel: Model<Ad>,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(
@@ -30,7 +32,7 @@ export class PostsService {
       throw new BadRequestException('Either image or video is required');
     }
 
-    return this.postModel.create({
+    const post = await this.postModel.create({
       userId,
       image: image || '',
       video: video || undefined,
@@ -38,6 +40,11 @@ export class PostsService {
       isPrivate: isPrivate || false,
       hiddenFromFollowers: hiddenFromFollowers || [],
     });
+
+    // Invalidate feed cache for the post owner (their own feed will change)
+    await this.invalidateFeedCache(userId);
+
+    return post;
   }
 
   async getLikes(postId: string, currentUserId: string, page: number = 1, limit: number = 20) {
@@ -124,6 +131,15 @@ export class PostsService {
   }
 
   async getFeed(userId: string, page: number = 1, limit: number = 20) {
+    // Cache key: feed:userId:page:limit
+    const cacheKey = `feed:${userId}:${page}:${limit}`;
+    
+    // Try to get from cache first
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
     const user = await this.userModel.findOne({ _id: userId, deletedAt: null }).select('following blockedUsers savedPosts role');
     if (!user) throw new NotFoundException('User not found');
     
@@ -259,7 +275,7 @@ export class PostsService {
       }
     }
 
-    return {
+    const feedResult = {
       posts: result,
       pagination: {
         page,
@@ -267,6 +283,25 @@ export class PostsService {
         hasMore: posts.length === maxLimit,
       },
     };
+
+    // Cache the result (TTL: 5 minutes = 300 seconds)
+    await this.redisService.set(cacheKey, JSON.stringify(feedResult), 300);
+
+    return feedResult;
+  }
+
+  // Helper method to invalidate feed cache
+  async invalidateFeedCache(userId: string): Promise<void> {
+    try {
+      // Get all feed cache keys for this user
+      const keys = await this.redisService.keys(`feed:${userId}:*`);
+      if (keys.length > 0) {
+        await this.redisService.mdel(keys);
+      }
+    } catch (error) {
+      // Log error but don't throw - cache invalidation should not break the flow
+      console.error('Error invalidating feed cache:', error);
+    }
   }
 
   async getUserPosts(userId: string, currentUserId?: string, page: number = 1, limit: number = 20) {
@@ -515,6 +550,16 @@ export class PostsService {
           type: 'like',
           postId: postId,
         });
+
+        // Increment notification count cache
+        const cacheKey = `notification:unread:${postOwnerId}`;
+        const cached = await this.redisService.get(cacheKey);
+        if (cached !== null) {
+          await this.redisService.incr(cacheKey);
+          await this.redisService.expire(cacheKey, 60);
+        } else {
+          await this.redisService.set(cacheKey, '1', 60);
+        }
       }
       return { message: 'Liked' };
     }
@@ -605,6 +650,16 @@ export class PostsService {
         type: 'comment',
         postId: postId,
       });
+
+      // Increment notification count cache
+      const cacheKey = `notification:unread:${postOwnerId}`;
+      const cached = await this.redisService.get(cacheKey);
+      if (cached !== null) {
+        await this.redisService.incr(cacheKey);
+        await this.redisService.expire(cacheKey, 60);
+      } else {
+        await this.redisService.set(cacheKey, '1', 60);
+      }
     }
 
     const populatedComment = await comment.populate('userId', 'fullName avatar');
@@ -710,6 +765,9 @@ export class PostsService {
       { _id: postId },
       { $set: { deletedAt: new Date() } }
     );
+
+    // Invalidate feed cache for the post owner
+    await this.invalidateFeedCache(userId);
     
     return { message: 'Post deleted successfully' };
   }

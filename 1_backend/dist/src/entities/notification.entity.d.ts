@@ -4,6 +4,8 @@ export declare class Notification extends Document {
     fromUserId: string;
     type: string;
     postId?: string;
+    postOwnerName?: string;
+    isFollowerNotification: boolean;
     read: boolean;
     deletedAt: Date;
 }
@@ -44,7 +46,7 @@ export declare const NotificationSchema: import("mongoose").Schema<Notification,
     }, "id"> & {
         id: string;
     }> | undefined;
-    deletedAt?: import("mongoose").SchemaDefinitionProperty<Date, Notification, Document<unknown, {}, Notification, {
+    userId?: import("mongoose").SchemaDefinitionProperty<string, Notification, Document<unknown, {}, Notification, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Notification & Required<{
         _id: import("mongoose").Types.ObjectId;
@@ -53,7 +55,7 @@ export declare const NotificationSchema: import("mongoose").Schema<Notification,
     }, "id"> & {
         id: string;
     }> | undefined;
-    userId?: import("mongoose").SchemaDefinitionProperty<string, Notification, Document<unknown, {}, Notification, {
+    fromUserId?: import("mongoose").SchemaDefinitionProperty<string, Notification, Document<unknown, {}, Notification, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Notification & Required<{
         _id: import("mongoose").Types.ObjectId;
@@ -71,6 +73,24 @@ export declare const NotificationSchema: import("mongoose").Schema<Notification,
     }, "id"> & {
         id: string;
     }> | undefined;
+    postOwnerName?: import("mongoose").SchemaDefinitionProperty<string | undefined, Notification, Document<unknown, {}, Notification, {
+        id: string;
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Notification & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    isFollowerNotification?: import("mongoose").SchemaDefinitionProperty<boolean, Notification, Document<unknown, {}, Notification, {
+        id: string;
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Notification & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
     read?: import("mongoose").SchemaDefinitionProperty<boolean, Notification, Document<unknown, {}, Notification, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Notification & Required<{
@@ -80,7 +100,7 @@ export declare const NotificationSchema: import("mongoose").Schema<Notification,
     }, "id"> & {
         id: string;
     }> | undefined;
-    fromUserId?: import("mongoose").SchemaDefinitionProperty<string, Notification, Document<unknown, {}, Notification, {
+    deletedAt?: import("mongoose").SchemaDefinitionProperty<Date, Notification, Document<unknown, {}, Notification, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Notification & Required<{
         _id: import("mongoose").Types.ObjectId;

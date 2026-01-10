@@ -23,4 +23,7 @@ export declare class AuthController {
     changePassword(dto: ChangePasswordDto, user: User): Promise<{
         message: string;
     }>;
+    logout(user: User): Promise<{
+        message: string;
+    }>;
 }

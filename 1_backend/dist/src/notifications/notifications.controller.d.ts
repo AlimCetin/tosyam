@@ -17,6 +17,8 @@ export declare class NotificationsController {
                 avatar: any;
             };
             postId: any;
+            postOwnerName: any;
+            isFollowerNotification: any;
             read: any;
             createdAt: any;
         }[];
