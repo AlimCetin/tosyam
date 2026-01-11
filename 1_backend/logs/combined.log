@@ -574,3 +574,7 @@
 {"context":"Bootstrap","level":"info","message":"🚀 Backend is running on: http://localhost:3000/api","service":"tosyam-backend","timestamp":"2026-01-11 23:41:34"}
 {"context":"Bootstrap","level":"info","message":"🔒 Security features enabled: Helmet, CORS, Rate Limiting, Validation, Winston Logging","service":"tosyam-backend","timestamp":"2026-01-11 23:41:34"}
 {"context":"AuthService","level":"info","message":"User logged in successfully: ali@a.com","service":"tosyam-backend","timestamp":"2026-01-11 23:46:55"}
+{"context":"AuthService","level":"info","message":"User logged in successfully: ali@a.com","service":"tosyam-backend","timestamp":"2026-01-11 23:52:42"}
+{"context":"AuthService","level":"info","message":"User logged in successfully: ali1@a.com","service":"tosyam-backend","timestamp":"2026-01-12 00:01:16"}
+{"context":"AuthService","level":"info","message":"User logged in successfully: ali@a.com","service":"tosyam-backend","timestamp":"2026-01-12 00:23:04"}
+{"context":"AuthService","level":"info","message":"User logged in successfully: ali1@a.com","service":"tosyam-backend","timestamp":"2026-01-12 00:27:13"}

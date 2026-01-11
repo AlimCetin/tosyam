@@ -77,10 +77,6 @@ export const AdminPanelScreen: React.FC = () => {
     <ScrollView
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Admin Paneli</Text>
-      </View>
-
       {/* Dashboard Stats */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Genel İstatistikler</Text>
@@ -183,16 +179,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  header: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#dbdbdb',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
   },
   section: {
     padding: 12,
