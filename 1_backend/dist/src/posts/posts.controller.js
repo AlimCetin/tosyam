@@ -67,6 +67,9 @@ let PostsController = class PostsController {
     async unsavePost(postId, user) {
         return this.postsService.unsavePost(postId, user._id.toString());
     }
+    async getSavedPosts(user, page, limit) {
+        return this.postsService.getSavedPosts(user._id.toString(), page, limit);
+    }
     async getPostForShare(postId, user) {
         return this.postsService.sharePost(postId, user._id.toString(), '');
     }
@@ -190,6 +193,15 @@ __decorate([
     __metadata("design:paramtypes", [String, user_entity_1.User]),
     __metadata("design:returntype", Promise)
 ], PostsController.prototype, "unsavePost", null);
+__decorate([
+    (0, common_1.Get)('saved'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)('page', new common_1.DefaultValuePipe(1), common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Query)('limit', new common_1.DefaultValuePipe(20), common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [user_entity_1.User, Number, Number]),
+    __metadata("design:returntype", Promise)
+], PostsController.prototype, "getSavedPosts", null);
 __decorate([
     (0, common_1.Get)(':postId/share'),
     __param(0, (0, common_1.Param)('postId')),

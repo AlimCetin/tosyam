@@ -103,6 +103,15 @@ export class PostsController {
     return this.postsService.unsavePost(postId, user._id.toString());
   }
 
+  @Get('saved')
+  async getSavedPosts(
+    @CurrentUser() user: User,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.postsService.getSavedPosts(user._id.toString(), page, limit);
+  }
+
   @Get(':postId/share')
   async getPostForShare(@Param('postId') postId: string, @CurrentUser() user: User) {
     return this.postsService.sharePost(postId, user._id.toString(), '');

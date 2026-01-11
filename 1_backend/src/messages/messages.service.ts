@@ -91,7 +91,6 @@ export class MessagesService {
         // Participants'ı formatla
         const formattedParticipants = validParticipants.map((p: any) => ({
           id: p._id?.toString() || p.toString(),
-          _id: p._id?.toString() || p.toString(),
           fullName: p.fullName || '',
           username: p.fullName || '',
           avatar: p.avatar || null,
@@ -111,7 +110,6 @@ export class MessagesService {
         const unreadCount = unreadCountsMap[conv._id.toString()] || 0;
         
         return {
-          _id: conv._id.toString(),
           id: conv._id.toString(),
           participants: formattedParticipants,
           lastMessage: formattedLastMessage,
@@ -167,7 +165,6 @@ export class MessagesService {
       .map((msg: any) => {
         const sender = msg.senderId;
         return {
-          _id: msg._id.toString(),
           id: msg._id.toString(),
           conversationId: msg.conversationId || conversationId,
           senderId: sender._id?.toString() || sender.toString(),
@@ -250,7 +247,6 @@ export class MessagesService {
     
     // conversationId'yi response'a ekle ve senderId'yi string'e çevir
     return {
-      _id: msgObj._id.toString(),
       id: msgObj._id.toString(),
       conversationId: conversation._id.toString(),
       senderId: sender?._id?.toString() || sender?.toString() || senderId,

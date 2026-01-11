@@ -17,7 +17,6 @@ export declare class MessagesGateway implements OnGatewayConnection {
         receiverId: string;
         text: string;
     }): Promise<{
-        _id: any;
         id: any;
         conversationId: string;
         senderId: any;

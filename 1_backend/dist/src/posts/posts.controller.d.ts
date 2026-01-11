@@ -96,6 +96,36 @@ export declare class PostsController {
     unsavePost(postId: string, user: User): Promise<{
         message: string;
     }>;
+    getSavedPosts(user: User, page: number, limit: number): Promise<{
+        posts: {
+            id: any;
+            userId: any;
+            user: {
+                id: any;
+                username: any;
+                fullName: any;
+                avatar: any;
+            };
+            image: any;
+            video: any;
+            caption: any;
+            likeCount: any;
+            commentCount: any;
+            isLiked: any;
+            isSaved: boolean;
+            isHidden: any;
+            isPrivate: any;
+            hiddenFromFollowers: any;
+            createdAt: any;
+        }[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+            hasMore: boolean;
+        };
+    }>;
     getPostForShare(postId: string, user: User): Promise<{
         postId: string;
         image: string;

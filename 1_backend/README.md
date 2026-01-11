@@ -6,12 +6,33 @@ Sosyal medya uygulaması için NestJS backend API.
 
 ### Docker ile MongoDB ve Redis
 
+#### 1. Docker Environment Setup (İsteğe Bağlı)
+
 ```bash
-# MongoDB, Redis ve MongoDB Web UI'yi başlat
+# Docker environment dosyasını kopyala
+cp docker.env.example .env.docker
+
+# .env.docker dosyasını düzenle (özellikle production için)
+# MongoDB ve Redis şifrelerini set et
+```
+
+#### 2. Servisleri Başlat
+
+```bash
+# Development modunda tüm servisleri başlat (Mongo Express dahil)
+docker-compose --profile dev up -d
+
+# Sadece MongoDB ve Redis'i başlat (production için)
 docker-compose up -d
+
+# Environment dosyası ile başlat
+docker-compose --env-file .env.docker up -d
 
 # Servis durumunu kontrol et
 docker-compose ps
+
+# Logları görüntüle
+docker-compose logs -f
 
 # Servisleri durdur
 docker-compose down
@@ -20,17 +41,31 @@ docker-compose down
 docker-compose down -v
 ```
 
-**MongoDB Web Arayüzü:**
+#### 3. Servis Bilgileri
+
+**MongoDB:**
+- Host: `localhost`
+- Port: `27017` (varsayılan, `.env.docker`'da değiştirilebilir)
+- Database: `tosyam`
+- Auth: Development'ta yok, production'da `.env.docker`'dan
+
+**MongoDB Web Arayüzü (Sadece Development):**
 - URL: http://localhost:8082
-- Kullanıcı adı: `admin`
-- Şifre: `admin`
+- Kullanıcı adı: `.env.docker`'daki `MONGO_EXPRESS_USERNAME` (varsayılan: `admin`)
+- Şifre: `.env.docker`'daki `MONGO_EXPRESS_PASSWORD` (varsayılan: `changeMe123!`)
+- **NOT:** Production'da kullanmayın! Sadece `docker-compose --profile dev up -d` ile başlar
 
 **Redis:**
 - Host: `localhost`
-- Port: `6379`
+- Port: `6379` (varsayılan, `.env.docker`'da değiştirilebilir)
 - URL: `redis://localhost:6379`
+- Password: Development'ta yok, production'da `.env.docker`'dan set edilebilir
 
-Tarayıcınızda http://localhost:8082 adresine giderek MongoDB veritabanınızı web arayüzünden yönetebilirsiniz.
+**🔒 Güvenlik Notları:**
+- Production'da **MUTLAKA** MongoDB username/password set edin (`.env.docker`)
+- Production'da Mongo Express'i **KULLANMAYIN** (profil belirtmeyin)
+- Production'da port'ları dışarıya açmayın veya firewall kullanın
+- `.env.docker` dosyasını **asla** Git'e commit etmeyin
 
 ### Proje Kurulumu
 
@@ -57,6 +92,32 @@ MONGODB_URI=mongodb://localhost:27017/tosyam
 # ============================================
 # OPTIONAL VARIABLES (OPSİYONEL)
 # ============================================
+
+# MongoDB Connection Pool Settings (Opsiyonel)
+# Production için önerilen: MAX=50, MIN=10
+# Development için önerilen: MAX=10, MIN=2
+# MONGODB_MAX_POOL_SIZE=10
+# MONGODB_MIN_POOL_SIZE=2
+
+# ============================================
+# ALERTING & MONITORING (OPSİYONEL)
+# ============================================
+
+# Webhook URL for alerts (Discord/Slack)
+# Kritik hatalar ve güvenlik olayları bu webhook'a gönderilir
+# ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN
+# ALERT_WEBHOOK_TYPE=discord (discord veya slack)
+
+# Discord Webhook Oluşturma:
+# 1. Discord sunucu ayarları → Entegrasyonlar → Webhook'lar
+# 2. Yeni Webhook oluştur
+# 3. Webhook URL'sini kopyala ve ALERT_WEBHOOK_URL'ye yapıştır
+
+# Slack Webhook Oluşturma:
+# 1. https://api.slack.com/apps → Create New App
+# 2. Incoming Webhooks → Activate
+# 3. Add New Webhook to Workspace
+# 4. Webhook URL'sini kopyala ve ALERT_WEBHOOK_URL'ye yapıştır
 
 # Redis Connection URL (varsayılan: redis://localhost:6379)
 # Docker kullanıyorsanız: redis://redis:6379 (docker-compose network içinde)
@@ -122,6 +183,13 @@ npm run start:dev
 - `GET /notifications` - Bildirimler
 - `PUT /notifications/:id/read` - Okundu işaretle
 - `PUT /notifications/read-all` - Tümünü okundu işaretle
+
+### Health & Monitoring
+- `GET /health` - Basic health check
+- `GET /health/detailed` - Detailed health (database, Redis status)
+- `GET /health/metrics` - Performance metrics
+
+Detaylı bilgi: [HEALTH_CHECK.md](./HEALTH_CHECK.md)
 
 ## 🔌 WebSocket
 

@@ -1,6 +1,7 @@
 import { UsersService } from './users.service';
 import { User } from '../entities/user.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { Types } from 'mongoose';
 export declare class UsersController {
     private usersService;
     constructor(usersService: UsersService);
@@ -10,14 +11,12 @@ export declare class UsersController {
     getUser(userId: string, user: User): Promise<any>;
     getFollowers(userId: string, user: User): Promise<{
         id: any;
-        _id: any;
         fullName: any;
         avatar: any;
         isFollowing: boolean;
     }[]>;
     getFollowing(userId: string, user: User): Promise<{
         id: any;
-        _id: any;
         fullName: any;
         avatar: any;
         isFollowing: boolean;
@@ -36,7 +35,6 @@ export declare class UsersController {
     }>;
     updateProfile(data: UpdateProfileDto, user: User): Promise<{
         id: string;
-        _id: string;
         followerCount: number;
         followingCount: number;
         fullName: string;
@@ -56,6 +54,7 @@ export declare class UsersController {
         bannedUntil: Date | null;
         isPermanentlyBanned: boolean;
         deletedAt: Date | null;
+        _id: Types.ObjectId;
         $locals: Record<string, unknown>;
         $op: "save" | "validate" | "remove" | null;
         $where: Record<string, unknown>;

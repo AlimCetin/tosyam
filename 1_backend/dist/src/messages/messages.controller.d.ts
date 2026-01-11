@@ -5,7 +5,6 @@ export declare class MessagesController {
     constructor(messagesService: MessagesService);
     getConversations(user: User, page: number, limit: number): Promise<{
         conversations: ({
-            _id: any;
             id: any;
             participants: any;
             lastMessage: any;
@@ -22,7 +21,6 @@ export declare class MessagesController {
     }>;
     getMessages(conversationId: string, user: User, page: number, limit: number): Promise<{
         messages: {
-            _id: any;
             id: any;
             conversationId: any;
             senderId: any;
@@ -47,7 +45,6 @@ export declare class MessagesController {
         receiverId: string;
         text: string;
     }, user: User): Promise<{
-        _id: any;
         id: any;
         conversationId: string;
         senderId: any;

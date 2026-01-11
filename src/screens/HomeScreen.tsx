@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   TextInput,
   SafeAreaView,
-  Share,
   Alert,
   Text,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Share from 'react-native-share';
+import RNFS from 'react-native-fs';
 import { PostCard } from '../components/PostCard';
 import { AdCard } from '../components/AdCard';
 import { postService } from '../services/postService';
@@ -180,30 +182,99 @@ export const HomeScreen: React.FC = () => {
     }
 
     try {
-      // Post bilgilerini paylaşım için hazırla
+      const username = post.user?.username || post.user?.fullName || 'Kullanıcı';
       const shareMessage = post.caption 
-        ? `${post.user.username || post.user.fullName} paylaştı: ${post.caption}\n${post.image || ''}`
-        : `${post.user.username || post.user.fullName} bir gönderi paylaştı\n${post.image || ''}`;
+        ? `${username} bir gönderi paylaştı: ${post.caption}`
+        : `${username} bir gönderi paylaştı`;
 
-      const result = await Share.share({
-        message: shareMessage,
-        url: post.image, // iOS için URL, Android için message içinde
-        title: 'Gönderiyi Paylaş',
-      });
-
-      if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-          // Paylaşıldı (belirli bir uygulamaya)
-          console.log('✅ Paylaşıldı:', result.activityType);
+      // Eğer görüntü veya video varsa, dosya olarak paylaş
+      if (post.image || post.video) {
+        const mediaData = post.image || post.video;
+        let filePath = '';
+        let shouldCleanup = false;
+        
+        // Base64 string'i kontrol et ve işle
+        if (mediaData && mediaData.startsWith('data:')) {
+          // Base64 formatından dosya tipini ve data'yı ayır
+          const base64Data = mediaData.split(',')[1];
+          const mimeType = mediaData.split(';')[0].split(':')[1];
+          const extension = mimeType.split('/')[1];
+          
+          // Geçici dosya oluştur
+          const fileName = `share_${Date.now()}.${extension}`;
+          filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
+          
+          // Base64'ü dosyaya yaz
+          await RNFS.writeFile(filePath, base64Data, 'base64');
+          shouldCleanup = true;
+          
+          console.log('✅ Base64 dosyaya yazıldı:', filePath);
+        } else if (mediaData && (mediaData.startsWith('http://') || mediaData.startsWith('https://'))) {
+          // HTTP/HTTPS URL'si ise indir
+          const extension = mediaData.includes('.mp4') || post.video ? 'mp4' : 'jpg';
+          const fileName = `share_${Date.now()}.${extension}`;
+          filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
+          
+          console.log('📥 URL indiriliyor:', mediaData);
+          const downloadResult = await RNFS.downloadFile({
+            fromUrl: mediaData,
+            toFile: filePath,
+          }).promise;
+          
+          if (downloadResult.statusCode !== 200) {
+            throw new Error('Görsel indirilemedi');
+          }
+          
+          shouldCleanup = true;
+          console.log('✅ URL indirildi:', filePath);
         } else {
-          // Paylaşıldı (genel)
-          console.log('✅ Paylaşıldı');
+          // Yerel dosya yolu
+          filePath = mediaData || '';
         }
-      } else if (result.action === Share.dismissedAction) {
-        // Paylaşım iptal edildi
-        console.log('❌ Paylaşım iptal edildi');
+        
+        // Paylaşım seçenekleri - sistem menüsü direkt açılır
+        const shareOptions: any = {
+          title: 'Paylaş',
+          message: shareMessage,
+          url: Platform.OS === 'android' ? `file://${filePath}` : filePath,
+          type: post.video ? 'video/mp4' : 'image/jpeg',
+          subject: shareMessage,
+        };
+
+        // Sistem paylaşım menüsünü aç (tüm uygulamalar görünür)
+        await Share.open(shareOptions);
+        console.log('✅ Gönderi paylaşıldı');
+        
+        // Paylaşım tamamlandıktan sonra geçici dosyayı temizle
+        if (shouldCleanup) {
+          setTimeout(async () => {
+            try {
+              const exists = await RNFS.exists(filePath);
+              if (exists) {
+                await RNFS.unlink(filePath);
+                console.log('✅ Geçici dosya silindi:', filePath);
+              }
+            } catch (cleanupError) {
+              console.warn('⚠️ Geçici dosya silinemedi:', cleanupError);
+            }
+          }, 2000); // 2 saniye bekle
+        }
+        
+      } else {
+        // Sadece metin paylaş
+        await Share.open({
+          title: 'Gönderiyi Paylaş',
+          message: shareMessage,
+          subject: 'Gönderiyi Paylaş',
+        });
+        console.log('✅ Gönderi paylaşıldı');
       }
     } catch (error: any) {
+      // Kullanıcı paylaşımı iptal ettiyse sessizce geç
+      if (error.message === 'User did not share' || error.message.includes('cancel')) {
+        console.log('❌ Paylaşım iptal edildi');
+        return;
+      }
       console.error('❌ Paylaşım hatası:', error);
       Alert.alert('Hata', 'Gönderi paylaşılamadı');
     }
@@ -236,7 +307,7 @@ export const HomeScreen: React.FC = () => {
           style={styles.searchContainer}
           onPress={handleSearchPress}
           activeOpacity={0.7}>
-          <Icon name="search" size={20} color="#8e8e8e" />
+          <Icon name="search-outline" size={24} color="#757575" />
           <View style={styles.searchPlaceholder}>
             <TextInput
               style={styles.searchInput}
@@ -250,7 +321,7 @@ export const HomeScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.iconButton}
             onPress={handleNotificationPress}>
-            <Icon name="notifications-outline" size={24} color="#000" />
+            <Icon name="notifications-circle-outline" size={28} color="#424242" />
             {unreadNotifications > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -262,7 +333,7 @@ export const HomeScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.iconButton}
             onPress={handleMessagePress}>
-            <Icon name="chatbubble-outline" size={24} color="#000" />
+            <Icon name="mail-outline" size={28} color="#424242" />
             {unreadMessages > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>

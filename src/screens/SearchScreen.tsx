@@ -44,7 +44,7 @@ export const SearchScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.searchBar}>
-        <Icon name="search" size={20} color="#8e8e8e" />
+        <Icon name="search-circle" size={24} color="#757575" />
         <TextInput
           style={styles.input}
           placeholder="Ara"

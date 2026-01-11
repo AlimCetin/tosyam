@@ -45,14 +45,7 @@ export const ChatScreen: React.FC = () => {
     };
   }, [conversationId, receiverId]);
 
-  // Ekrana her girildiğinde ve mesajlar yüklendiğinde okundu işaretle
-  useFocusEffect(
-    React.useCallback(() => {
-      if (activeConversationId) {
-        markMessagesAsRead(activeConversationId);
-      }
-    }, [activeConversationId])
-  );
+  // useFocusEffect kaldırıldı - markAsRead sadece loadMessages içinde çağrılıyor
 
   const initSocket = () => {
     socketRef.current = io(SOCKET_URL);
@@ -267,7 +260,7 @@ export const ChatScreen: React.FC = () => {
           multiline
         />
         <TouchableOpacity onPress={sendMessage}>
-          <Icon name="send" size={24} color="#0095f6" />
+          <Icon name="send-outline" size={26} color="#9C27B0" />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

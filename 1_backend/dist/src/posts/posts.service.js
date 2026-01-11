@@ -575,6 +575,95 @@ let PostsService = class PostsService {
         await this.userModel.updateOne({ _id: userId }, { $pull: { savedPosts: postId } });
         return { message: 'Post unsaved' };
     }
+    async getSavedPosts(userId, page = 1, limit = 20) {
+        const user = await this.userModel.findOne({ _id: userId, deletedAt: null }).select('savedPosts blockedUsers').lean();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const savedPostIds = user.savedPosts?.map((id) => id.toString()) || [];
+        if (savedPostIds.length === 0) {
+            return {
+                posts: [],
+                pagination: {
+                    page,
+                    limit,
+                    total: 0,
+                    totalPages: 0,
+                    hasMore: false,
+                },
+            };
+        }
+        const skip = (page - 1) * limit;
+        const maxLimit = Math.min(limit, 50);
+        const posts = await this.postModel
+            .find({
+            _id: { $in: savedPostIds },
+            deletedAt: null,
+        })
+            .populate('userId', 'fullName avatar')
+            .select('userId image video caption likes commentCount createdAt isHidden isPrivate hiddenFromFollowers')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(maxLimit)
+            .lean();
+        const blockedUsers = user.blockedUsers?.map((id) => id.toString()) || [];
+        let filteredPosts = posts.filter((post) => {
+            const postOwnerId = post.userId?._id?.toString() || post.userId?.toString();
+            return !blockedUsers.includes(postOwnerId);
+        });
+        const postOwnerIds = filteredPosts.map((post) => {
+            return post.userId?._id?.toString() || post.userId?.toString();
+        }).filter(Boolean);
+        if (postOwnerIds.length > 0) {
+            const usersWhoBlockedMe = await this.userModel.find({
+                _id: { $in: postOwnerIds },
+                blockedUsers: userId,
+                deletedAt: null,
+            }).select('_id').lean();
+            const blockedByUserIds = usersWhoBlockedMe.map((u) => u._id.toString());
+            filteredPosts = filteredPosts.filter((post) => {
+                const postOwnerId = post.userId?._id?.toString() || post.userId?.toString();
+                return !blockedByUserIds.includes(postOwnerId);
+            });
+        }
+        const formattedPosts = filteredPosts.map((post) => {
+            const populatedUserId = post.userId?._id || post.userId;
+            const userData = post.userId;
+            return {
+                id: post._id.toString(),
+                userId: populatedUserId.toString(),
+                user: {
+                    id: userData?._id?.toString() || userData?.toString() || '',
+                    username: userData?.fullName || '',
+                    fullName: userData?.fullName || '',
+                    avatar: userData?.avatar || null,
+                },
+                image: post.image,
+                video: post.video || undefined,
+                caption: post.caption || '',
+                likeCount: post.likes?.length || 0,
+                commentCount: post.commentCount || 0,
+                isLiked: post.likes?.some((id) => id.toString() === userId) || false,
+                isSaved: true,
+                isHidden: post.isHidden || false,
+                isPrivate: post.isPrivate || false,
+                hiddenFromFollowers: (post.hiddenFromFollowers || []).map((id) => id.toString()),
+                createdAt: post.createdAt,
+            };
+        });
+        const total = savedPostIds.length;
+        const totalPages = Math.ceil(total / limit);
+        return {
+            posts: formattedPosts,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasMore: page < totalPages,
+            },
+        };
+    }
     async hidePost(postId, userId) {
         const post = await this.postModel.findOne({ _id: postId, deletedAt: null });
         if (!post)

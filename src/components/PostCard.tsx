@@ -71,24 +71,24 @@ export const PostCard: React.FC<Props> = ({
             <Icon
               name={post.isLiked ? 'heart' : 'heart-outline'}
               size={28}
-              color={post.isLiked ? '#ff3040' : '#000'}
+              color={post.isLiked ? '#FF1744' : '#424242'}
             />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => onComment(post.id)}>
-            <Icon name="chatbubble-outline" size={26} color="#000" />
+            <Icon name="chatbubbles-outline" size={27} color="#424242" />
           </TouchableOpacity>
           {onShare && (
             <TouchableOpacity onPress={() => onShare(post.id)}>
-              <Icon name="paper-plane-outline" size={26} color="#000" />
+              <Icon name="arrow-redo-outline" size={27} color="#424242" />
             </TouchableOpacity>
           )}
         </View>
         {onSave && (
           <TouchableOpacity onPress={() => onSave(post.id)}>
             <Icon 
-              name={post.isSaved ? 'bookmark' : 'bookmark-outline'} 
-              size={26} 
-              color="#000" 
+              name={post.isSaved ? 'ribbon' : 'ribbon-outline'} 
+              size={27} 
+              color={post.isSaved ? '#9C27B0' : '#424242'}
             />
           </TouchableOpacity>
         )}

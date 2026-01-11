@@ -462,3 +462,5 @@ async invalidateAllUserCaches() {
 - [NestJS Redis Module](https://docs.nestjs.com/microservices/redis)
 - [Cache Patterns](https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/Strategies.html)
 
+
+

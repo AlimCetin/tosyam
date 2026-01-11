@@ -45,32 +45,44 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppLoggerService = void 0;
 const common_1 = require("@nestjs/common");
 const winston = __importStar(require("winston"));
+const webhook_transport_1 = require("./webhook.transport");
 let AppLoggerService = class AppLoggerService {
     logger;
     constructor() {
         const isProduction = process.env.NODE_ENV === 'production';
+        const transports = [
+            new winston.transports.Console({
+                format: winston.format.combine(winston.format.colorize(), winston.format.printf(({ timestamp, level, message, context, ...meta }) => {
+                    const contextStr = context ? `[${context}]` : '';
+                    const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
+                    return `${timestamp} ${level} ${contextStr} ${message} ${metaStr}`;
+                })),
+            }),
+            new winston.transports.File({
+                filename: 'logs/error.log',
+                level: 'error',
+                format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+            }),
+            new winston.transports.File({
+                filename: 'logs/combined.log',
+                format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+            }),
+        ];
+        const webhookUrl = process.env.ALERT_WEBHOOK_URL;
+        const webhookType = (process.env.ALERT_WEBHOOK_TYPE || 'discord');
+        if (webhookUrl) {
+            transports.push(new webhook_transport_1.WebhookTransport({
+                webhookUrl,
+                webhookType,
+                level: 'warn',
+                appName: 'Tosyam Backend',
+            }));
+        }
         this.logger = winston.createLogger({
             level: isProduction ? 'info' : 'debug',
             format: winston.format.combine(winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), winston.format.errors({ stack: true }), winston.format.splat(), winston.format.json()),
             defaultMeta: { service: 'tosyam-backend' },
-            transports: [
-                new winston.transports.Console({
-                    format: winston.format.combine(winston.format.colorize(), winston.format.printf(({ timestamp, level, message, context, ...meta }) => {
-                        const contextStr = context ? `[${context}]` : '';
-                        const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
-                        return `${timestamp} ${level} ${contextStr} ${message} ${metaStr}`;
-                    })),
-                }),
-                new winston.transports.File({
-                    filename: 'logs/error.log',
-                    level: 'error',
-                    format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
-                }),
-                new winston.transports.File({
-                    filename: 'logs/combined.log',
-                    format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
-                }),
-            ],
+            transports,
         });
     }
     log(message, context) {

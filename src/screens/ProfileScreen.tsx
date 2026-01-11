@@ -215,7 +215,7 @@ export const ProfileScreen: React.FC = () => {
 
       <View style={styles.actions}>
         {isOwnProfile ? (
-          // Kendi profili - Düzenle ve Ayarlar butonları
+          // Kendi profili - Düzenle, Kaydedilenler ve Ayarlar butonları
           <>
             <TouchableOpacity
               style={[styles.button, styles.editButton]}
@@ -223,9 +223,14 @@ export const ProfileScreen: React.FC = () => {
               <Text style={[styles.buttonText, { color: '#000' }]}>Profili Düzenle</Text>
             </TouchableOpacity>
             <TouchableOpacity
+              style={styles.savedButton}
+              onPress={() => navigation.navigate('SavedPosts')}>
+              <Icon name="ribbon-outline" size={22} color="#424242" />
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.settingsButton}
               onPress={handleSettings}>
-              <Icon name="settings-outline" size={20} color="#000" />
+              <Icon name="settings-sharp" size={22} color="#424242" />
             </TouchableOpacity>
           </>
         ) : (
@@ -248,7 +253,7 @@ export const ProfileScreen: React.FC = () => {
               onPress={() => {
                 navigation.navigate('ProfileMenu', { userId: user.id });
               }}>
-              <Icon name="ellipsis-horizontal" size={20} />
+              <Icon name="ellipsis-horizontal-circle-outline" size={24} color="#424242" />
             </TouchableOpacity>
           </>
         )}
@@ -270,7 +275,7 @@ export const ProfileScreen: React.FC = () => {
             onPress={() => navigation.navigate('PostDetail', { postId: item.id })}>
             {item.video ? (
               <View style={[styles.thumbImage, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }]}>
-                <Icon name="play-circle-outline" size={28} color="#fff" />
+                <Icon name="play-circle" size={32} color="#fff" />
               </View>
             ) : (
               <Image source={{ uri: item.image || '' }} style={styles.thumbImage} />
@@ -374,6 +379,13 @@ const styles = StyleSheet.create({
   },
   buttonTextSecondary: {
     color: '#000',
+  },
+  savedButton: {
+    padding: 6,
+    backgroundColor: '#efefef',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dbdbdb',
   },
   settingsButton: {
     padding: 6,

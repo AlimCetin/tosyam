@@ -11,7 +11,6 @@ export declare class MessagesService {
     constructor(conversationModel: Model<Conversation>, messageModel: Model<Message>, notificationModel: Model<Notification>, redisService: RedisService);
     getConversations(userId: string, page?: number, limit?: number): Promise<{
         conversations: ({
-            _id: any;
             id: any;
             participants: any;
             lastMessage: any;
@@ -28,7 +27,6 @@ export declare class MessagesService {
     }>;
     getMessages(conversationId: string, userId: string, page?: number, limit?: number): Promise<{
         messages: {
-            _id: any;
             id: any;
             conversationId: any;
             senderId: any;
@@ -50,7 +48,6 @@ export declare class MessagesService {
         };
     }>;
     sendMessage(senderId: string, receiverId: string, text: string): Promise<{
-        _id: any;
         id: any;
         conversationId: string;
         senderId: any;

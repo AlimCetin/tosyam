@@ -706,6 +706,114 @@ export class PostsService {
     return { message: 'Post unsaved' };
   }
 
+  async getSavedPosts(userId: string, page: number = 1, limit: number = 20) {
+    // Get user's saved post IDs
+    const user = await this.userModel.findOne({ _id: userId, deletedAt: null }).select('savedPosts blockedUsers').lean();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const savedPostIds = user.savedPosts?.map((id: any) => id.toString()) || [];
+    
+    if (savedPostIds.length === 0) {
+      return {
+        posts: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+          hasMore: false,
+        },
+      };
+    }
+
+    // Pagination
+    const skip = (page - 1) * limit;
+    const maxLimit = Math.min(limit, 50);
+
+    // Get saved posts
+    const posts = await this.postModel
+      .find({
+        _id: { $in: savedPostIds },
+        deletedAt: null,
+      })
+      .populate('userId', 'fullName avatar')
+      .select('userId image video caption likes commentCount createdAt isHidden isPrivate hiddenFromFollowers')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(maxLimit)
+      .lean();
+
+    // Filter blocked users' posts
+    const blockedUsers = user.blockedUsers?.map((id: any) => id.toString()) || [];
+    let filteredPosts = posts.filter((post: any) => {
+      const postOwnerId = post.userId?._id?.toString() || post.userId?.toString();
+      return !blockedUsers.includes(postOwnerId);
+    });
+
+    // Check if post owners have blocked current user
+    const postOwnerIds = filteredPosts.map((post: any) => {
+      return post.userId?._id?.toString() || post.userId?.toString();
+    }).filter(Boolean);
+
+    if (postOwnerIds.length > 0) {
+      const usersWhoBlockedMe = await this.userModel.find({
+        _id: { $in: postOwnerIds },
+        blockedUsers: userId,
+        deletedAt: null,
+      }).select('_id').lean();
+
+      const blockedByUserIds = usersWhoBlockedMe.map((u: any) => u._id.toString());
+      filteredPosts = filteredPosts.filter((post: any) => {
+        const postOwnerId = post.userId?._id?.toString() || post.userId?.toString();
+        return !blockedByUserIds.includes(postOwnerId);
+      });
+    }
+
+    // Format posts
+    const formattedPosts = filteredPosts.map((post: any) => {
+      const populatedUserId = post.userId?._id || post.userId;
+      const userData = post.userId as any;
+
+      return {
+        id: post._id.toString(),
+        userId: populatedUserId.toString(),
+        user: {
+          id: userData?._id?.toString() || userData?.toString() || '',
+          username: userData?.fullName || '',
+          fullName: userData?.fullName || '',
+          avatar: userData?.avatar || null,
+        },
+        image: post.image,
+        video: post.video || undefined,
+        caption: post.caption || '',
+        likeCount: post.likes?.length || 0,
+        commentCount: post.commentCount || 0,
+        isLiked: post.likes?.some((id: any) => id.toString() === userId) || false,
+        isSaved: true, // All posts in savedPosts are saved
+        isHidden: post.isHidden || false,
+        isPrivate: post.isPrivate || false,
+        hiddenFromFollowers: (post.hiddenFromFollowers || []).map((id: any) => id.toString()),
+        createdAt: post.createdAt,
+      };
+    });
+
+    const total = savedPostIds.length;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      posts: formattedPosts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      },
+    };
+  }
+
   async hidePost(postId: string, userId: string) {
     const post = await this.postModel.findOne({ _id: postId, deletedAt: null });
     if (!post) throw new NotFoundException('Post not found');

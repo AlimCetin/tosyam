@@ -169,7 +169,7 @@ export const PostDetailScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => navigation.navigate('Comments', { postId })}>
-              <Icon name="chatbubble-outline" size={24} color="#000" />
+              <Icon name="chatbubbles-outline" size={24} color="#424242" />
               <Text style={styles.actionText}>
                 {post.commentCount || 0} Yorum
               </Text>
@@ -275,11 +275,11 @@ export const PostDetailScreen: React.FC = () => {
                 <Icon
                   name={post.isLiked ? 'heart' : 'heart-outline'}
                   size={28}
-                  color={post.isLiked ? '#ff3040' : '#000'}
+                  color={post.isLiked ? '#FF1744' : '#424242'}
                 />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => navigation.navigate('Comments', { postId })}>
-                <Icon name="chatbubble-outline" size={26} color="#000" />
+                <Icon name="chatbubbles-outline" size={27} color="#424242" />
               </TouchableOpacity>
             </View>
             <TouchableOpacity
@@ -296,9 +296,9 @@ export const PostDetailScreen: React.FC = () => {
                 }
               }}>
               <Icon 
-                name={post.isSaved ? 'bookmark' : 'bookmark-outline'} 
-                size={26} 
-                color="#000" 
+                name={post.isSaved ? 'ribbon' : 'ribbon-outline'} 
+                size={27} 
+                color={post.isSaved ? '#9C27B0' : '#424242'}
               />
             </TouchableOpacity>
           </View>

@@ -70,7 +70,6 @@ let UsersService = class UsersService {
             result = {
                 ...userObj,
                 id: userObj._id.toString(),
-                _id: userObj._id.toString(),
                 isFollowing,
                 followerCount,
                 followingCount,
@@ -80,7 +79,6 @@ let UsersService = class UsersService {
             result = {
                 ...userObj,
                 id: userObj._id.toString(),
-                _id: userObj._id.toString(),
                 followerCount,
                 followingCount,
             };
@@ -179,7 +177,6 @@ let UsersService = class UsersService {
         const result = {
             ...userObj,
             id: userObj._id.toString(),
-            _id: userObj._id.toString(),
             followerCount: userObj.followers?.length || 0,
             followingCount: userObj.following?.length || 0,
         };
@@ -226,7 +223,6 @@ let UsersService = class UsersService {
             const followerId = follower._id.toString();
             return {
                 id: followerId,
-                _id: followerId,
                 fullName: follower.fullName,
                 avatar: follower.avatar,
                 isFollowing: currentUserFollowing.includes(followerId),
@@ -267,7 +263,6 @@ let UsersService = class UsersService {
             const followedId = followed._id.toString();
             return {
                 id: followedId,
-                _id: followedId,
                 fullName: followed.fullName,
                 avatar: followed.avatar,
                 isFollowing: currentUserFollowing.includes(followedId),

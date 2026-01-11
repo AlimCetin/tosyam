@@ -363,3 +363,5 @@ async updatePost(postId: string, data: any) {
 
 **Özetle:** Redis = **Hazır yemek deposu**, MongoDB = **Mutfak (yemek yapılan yer)** 🍳
 
+
+

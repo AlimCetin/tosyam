@@ -15,6 +15,7 @@ import { AdsModule } from './ads/ads.module';
 import { AppController } from './app.controller';
 import { AppLoggerService } from './common/logger/logger.service';
 import { RedisModule } from './common/redis/redis.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { RedisModule } from './common/redis/redis.module';
     }),
     RedisModule,
     DatabaseModule,
+    HealthModule,
     AuthModule,
     UsersModule,
     PostsModule,

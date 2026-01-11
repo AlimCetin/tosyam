@@ -442,3 +442,5 @@ Redis, uygulamanızı **çok daha hızlı** hale getiren bir araçtır. Doğru k
 
 **Teknik olarak:** Redis, veritabanınızın hızlı "yardımcısı"dır. Ana veri MongoDB'de, sık kullanılan veriler Redis'te! 🚀
 
+
+

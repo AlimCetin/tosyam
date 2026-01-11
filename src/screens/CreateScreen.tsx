@@ -123,21 +123,21 @@ export const CreateScreen: React.FC = () => {
                 setVideo(null);
               }}
             >
-              <Icon name="close-circle" size={24} color="#fff" />
+              <Icon name="close-circle-outline" size={26} color="#fff" />
               <Text style={styles.changeMediaText}>Medyayı Değiştir</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.uploadArea}>
-            <Icon name="cloud-upload-outline" size={64} color="#0095f6" />
+            <Icon name="cloud-upload-outline" size={68} color="#9C27B0" />
             <Text style={styles.uploadTitle}>Fotoğraf veya Video Seç</Text>
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.mediaButton} onPress={pickImage}>
-                <Icon name="camera-outline" size={32} color="#0095f6" />
+                <Icon name="images-outline" size={36} color="#9C27B0" />
                 <Text style={styles.mediaButtonText}>Fotoğraf</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.mediaButton} onPress={pickVideo}>
-                <Icon name="videocam-outline" size={32} color="#0095f6" />
+                <Icon name="play-circle-outline" size={36} color="#9C27B0" />
                 <Text style={styles.mediaButtonText}>Video</Text>
               </TouchableOpacity>
             </View>
@@ -156,7 +156,7 @@ export const CreateScreen: React.FC = () => {
         <View style={styles.privacySection}>
           <View style={styles.privacyItem}>
             <View style={styles.privacyLeft}>
-              <Icon name="lock-closed-outline" size={24} color="#000" />
+              <Icon name="lock-closed-outline" size={24} color="#424242" />
               <View style={styles.privacyTextContainer}>
                 <Text style={styles.privacyTitle}>Sadece Takipçiler</Text>
                 <Text style={styles.privacyDescription}>
@@ -180,11 +180,11 @@ export const CreateScreen: React.FC = () => {
                   initialHidden: hiddenFromFollowers,
                 });
               }}>
-              <Icon name="eye-off-outline" size={20} color="#0095f6" />
+              <Icon name="eye-off-outline" size={22} color="#9C27B0" />
               <Text style={styles.manageButtonText}>
                 Belirli Takipçilerden Gizle {hiddenFromFollowers.length > 0 && `(${hiddenFromFollowers.length})`}
               </Text>
-              <Icon name="chevron-forward" size={20} color="#8e8e8e" />
+              <Icon name="chevron-forward-outline" size={22} color="#757575" />
             </TouchableOpacity>
           )}
         </View>

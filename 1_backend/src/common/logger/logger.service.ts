@@ -1,5 +1,6 @@
 import { Injectable, LoggerService } from '@nestjs/common';
 import * as winston from 'winston';
+import { WebhookTransport } from './webhook.transport';
 
 @Injectable()
 export class AppLoggerService implements LoggerService {
@@ -7,6 +8,52 @@ export class AppLoggerService implements LoggerService {
 
   constructor() {
     const isProduction = process.env.NODE_ENV === 'production';
+    
+    const transports: winston.transport[] = [
+      // Console transport
+      new winston.transports.Console({
+        format: winston.format.combine(
+          winston.format.colorize(),
+          winston.format.printf(({ timestamp, level, message, context, ...meta }) => {
+            const contextStr = context ? `[${context}]` : '';
+            const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
+            return `${timestamp} ${level} ${contextStr} ${message} ${metaStr}`;
+          }),
+        ),
+      }),
+      // File transport for errors
+      new winston.transports.File({
+        filename: 'logs/error.log',
+        level: 'error',
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.json(),
+        ),
+      }),
+      // File transport for all logs
+      new winston.transports.File({
+        filename: 'logs/combined.log',
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.json(),
+        ),
+      }),
+    ];
+
+    // Webhook transport (Discord/Slack) - Sadece webhook URL varsa aktif
+    const webhookUrl = process.env.ALERT_WEBHOOK_URL;
+    const webhookType = (process.env.ALERT_WEBHOOK_TYPE || 'discord') as 'discord' | 'slack';
+    
+    if (webhookUrl) {
+      transports.push(
+        new WebhookTransport({
+          webhookUrl,
+          webhookType,
+          level: 'warn', // Sadece warn ve error seviyelerini gönder
+          appName: 'Tosyam Backend',
+        }),
+      );
+    }
     
     this.logger = winston.createLogger({
       level: isProduction ? 'info' : 'debug',
@@ -17,36 +64,7 @@ export class AppLoggerService implements LoggerService {
         winston.format.json(),
       ),
       defaultMeta: { service: 'tosyam-backend' },
-      transports: [
-        // Console transport
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.printf(({ timestamp, level, message, context, ...meta }) => {
-              const contextStr = context ? `[${context}]` : '';
-              const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
-              return `${timestamp} ${level} ${contextStr} ${message} ${metaStr}`;
-            }),
-          ),
-        }),
-        // File transport for errors
-        new winston.transports.File({
-          filename: 'logs/error.log',
-          level: 'error',
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.json(),
-          ),
-        }),
-        // File transport for all logs
-        new winston.transports.File({
-          filename: 'logs/combined.log',
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.json(),
-          ),
-        }),
-      ],
+      transports,
     });
   }
 

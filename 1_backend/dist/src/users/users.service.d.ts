@@ -34,7 +34,6 @@ export declare class UsersService {
     }>;
     updateProfile(userId: string, data: UpdateProfileDto): Promise<{
         id: string;
-        _id: string;
         followerCount: number;
         followingCount: number;
         fullName: string;
@@ -54,6 +53,7 @@ export declare class UsersService {
         bannedUntil: Date | null;
         isPermanentlyBanned: boolean;
         deletedAt: Date | null;
+        _id: import("mongoose").Types.ObjectId;
         $locals: Record<string, unknown>;
         $op: "save" | "validate" | "remove" | null;
         $where: Record<string, unknown>;
@@ -68,14 +68,12 @@ export declare class UsersService {
     getBlockedUsers(userId: string): Promise<string[]>;
     getFollowers(userId: string, currentUserId?: string): Promise<{
         id: any;
-        _id: any;
         fullName: any;
         avatar: any;
         isFollowing: boolean;
     }[]>;
     getFollowing(userId: string, currentUserId?: string): Promise<{
         id: any;
-        _id: any;
         fullName: any;
         avatar: any;
         isFollowing: boolean;

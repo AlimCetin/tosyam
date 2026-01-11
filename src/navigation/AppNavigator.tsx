@@ -17,6 +17,7 @@ import { ProfileMenuScreen } from '../screens/ProfileMenuScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { LikesListScreen } from '../screens/LikesListScreen';
 import { FollowListScreen } from '../screens/FollowListScreen';
+import { SavedPostsScreen } from '../screens/SavedPostsScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AccountSettingsScreen } from '../screens/AccountSettingsScreen';
@@ -102,6 +103,11 @@ export const AppNavigator = () => {
           options={({ route }: any) => ({ 
             title: (route.params as any)?.type === 'followers' ? 'Takipçiler' : 'Takip Edilenler' 
           })}
+        />
+        <Stack.Screen
+          name="SavedPosts"
+          component={SavedPostsScreen}
+          options={{ title: 'Kaydedilenler' }}
         />
         <Stack.Screen
           name="EditProfile"

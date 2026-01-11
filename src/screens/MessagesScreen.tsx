@@ -41,22 +41,15 @@ export const MessagesScreen: React.FC = () => {
   };
 
   const handleConversationPress = async (conversationId: string, receiverId?: string) => {
-    // Conversation'a tıklandığında mesajları okundu işaretle (sadece bu conversation için)
-    try {
-      await messageService.markAsRead(conversationId);
-      console.log('✅ Conversation mesajları okundu olarak işaretlendi:', conversationId);
-      
-      // Local state'i güncelle (unreadCount'u azalt)
-      setConversations((prev) =>
-        prev.map((conv) =>
-          conv.id === conversationId || conv._id === conversationId
-            ? { ...conv, unreadCount: 0 }
-            : conv
-        )
-      );
-    } catch (error) {
-      console.error('❌ Mesajlar okundu işaretlenemedi:', error);
-    }
+    // markAsRead ChatScreen'de loadMessages içinde yapılıyor, burada yapmaya gerek yok
+    // Local state'i güncelle (unreadCount'u azalt) - ChatScreen açıldığında mesajlar okundu işaretlenecek
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.id === conversationId || conv._id === conversationId
+          ? { ...conv, unreadCount: 0 }
+          : conv
+      )
+    );
     
     navigation.navigate('Chat', { conversationId, receiverId });
   };

@@ -125,6 +125,36 @@ export declare class PostsService {
     unsavePost(postId: string, userId: string): Promise<{
         message: string;
     }>;
+    getSavedPosts(userId: string, page?: number, limit?: number): Promise<{
+        posts: {
+            id: any;
+            userId: any;
+            user: {
+                id: any;
+                username: any;
+                fullName: any;
+                avatar: any;
+            };
+            image: any;
+            video: any;
+            caption: any;
+            likeCount: any;
+            commentCount: any;
+            isLiked: any;
+            isSaved: boolean;
+            isHidden: any;
+            isPrivate: any;
+            hiddenFromFollowers: any;
+            createdAt: any;
+        }[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+            hasMore: boolean;
+        };
+    }>;
     hidePost(postId: string, userId: string): Promise<{
         message: string;
     }>;

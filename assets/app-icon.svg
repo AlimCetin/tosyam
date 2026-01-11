@@ -1,0 +1,81 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Premium gradyanlar -->
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFA500;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#047857;stop-opacity:1" />
+    </linearGradient>
+    
+    <radialGradient id="glowGradient">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#FFD700;stop-opacity:0" />
+    </radialGradient>
+    
+    <filter id="premiumShadow">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Arka plan -->
+  <rect width="400" height="400" fill="#FFFFFF"/>
+  
+  <!-- Işık efekti -->
+  <circle cx="200" cy="180" r="120" fill="url(#glowGradient)"/>
+  
+  <!-- Ana sembol - Stilize pirinç tanesi crown/taç formu -->
+  <g filter="url(#premiumShadow)">
+    <!-- Merkez büyük altın pirinç tanesi -->
+    <ellipse cx="200" cy="170" rx="18" ry="55" fill="url(#goldGradient)" opacity="0.95"/>
+    
+    <!-- Sol yan -->
+    <ellipse cx="165" cy="185" rx="15" ry="48" fill="url(#goldGradient)" 
+             opacity="0.85" transform="rotate(-25 165 185)"/>
+    
+    <!-- Sağ yan -->
+    <ellipse cx="235" cy="185" rx="15" ry="48" fill="url(#goldGradient)" 
+             opacity="0.85" transform="rotate(25 235 185)"/>
+    
+    <!-- Sol dış -->
+    <ellipse cx="140" cy="200" rx="12" ry="40" fill="url(#goldGradient)" 
+             opacity="0.7" transform="rotate(-35 140 200)"/>
+    
+    <!-- Sağ dış -->
+    <ellipse cx="260" cy="200" rx="12" ry="40" fill="url(#goldGradient)" 
+             opacity="0.7" transform="rotate(35 260 200)"/>
+    
+    <!-- Alt merkez tamamlayıcı -->
+    <ellipse cx="200" cy="215" rx="14" ry="42" fill="url(#goldGradient)" 
+             opacity="0.75" transform="rotate(-5 200 215)"/>
+  </g>
+  
+  <!-- Minimal yeşil yaprak detayları -->
+  <g opacity="0.9">
+    <path d="M 180 230 Q 175 240 180 250" stroke="url(#greenGradient)" 
+          stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M 220 230 Q 225 240 220 250" stroke="url(#greenGradient)" 
+          stroke-width="3" fill="none" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Premium tipografi -->
+  <text x="200" y="310" font-family="Georgia, serif" font-size="58" 
+        font-weight="700" fill="#1A1A1A" text-anchor="middle" letter-spacing="2" 
+        style="font-style: italic;">
+    Tosyam
+  </text>
+  
+  <!-- Altın ince çizgi -->
+  <line x1="120" y1="330" x2="280" y2="330" stroke="url(#goldGradient)" 
+        stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Minimal dekoratif elmas -->
+  <g transform="translate(200, 345)">
+    <path d="M 0,-4 L 3,0 L 0,4 L -3,0 Z" fill="url(#goldGradient)"/>
+  </g>
+</svg>
+

@@ -95,34 +95,34 @@ export const SettingsScreen: React.FC = () => {
         
         <TouchableOpacity style={styles.settingItem} onPress={handleBlockedUsers}>
           <View style={styles.settingLeft}>
-            <Icon name="ban-outline" size={24} color="#000" />
+            <Icon name="ban" size={24} color="#FF1744" />
             <Text style={styles.settingText}>Engellenen Kullanıcılar</Text>
           </View>
-          <Icon name="chevron-forward" size={20} color="#8e8e8e" />
+          <Icon name="chevron-forward-outline" size={22} color="#757575" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingItem} onPress={handlePrivacy}>
           <View style={styles.settingLeft}>
-            <Icon name="lock-closed-outline" size={24} color="#000" />
+            <Icon name="lock-closed" size={24} color="#424242" />
             <Text style={styles.settingText}>Gizlilik</Text>
           </View>
-          <Icon name="chevron-forward" size={20} color="#8e8e8e" />
+          <Icon name="chevron-forward-outline" size={22} color="#757575" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingItem} onPress={handleSecurity}>
           <View style={styles.settingLeft}>
-            <Icon name="shield-checkmark-outline" size={24} color="#000" />
+            <Icon name="shield-checkmark" size={24} color="#4CAF50" />
             <Text style={styles.settingText}>Güvenlik</Text>
           </View>
-          <Icon name="chevron-forward" size={20} color="#8e8e8e" />
+          <Icon name="chevron-forward-outline" size={22} color="#757575" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingItem} onPress={handleAccountSettings}>
           <View style={styles.settingLeft}>
-            <Icon name="person-circle-outline" size={24} color="#000" />
+            <Icon name="person-circle" size={26} color="#424242" />
             <Text style={styles.settingText}>Hesap Ayarları</Text>
           </View>
-          <Icon name="chevron-forward" size={20} color="#8e8e8e" />
+          <Icon name="chevron-forward-outline" size={22} color="#757575" />
         </TouchableOpacity>
       </View>
 
@@ -131,7 +131,7 @@ export const SettingsScreen: React.FC = () => {
         
         <View style={styles.settingItem}>
           <View style={styles.settingLeft}>
-            <Icon name="notifications-outline" size={24} color="#000" />
+            <Icon name="notifications-circle-outline" size={26} color="#424242" />
             <Text style={styles.settingText}>Bildirimleri Aç</Text>
           </View>
           <Switch
@@ -149,10 +149,10 @@ export const SettingsScreen: React.FC = () => {
           
           <TouchableOpacity style={styles.settingItem} onPress={handleAdminPanel}>
             <View style={styles.settingLeft}>
-              <Icon name="shield-outline" size={24} color="#0095f6" />
+              <Icon name="shield" size={24} color="#9C27B0" />
               <Text style={[styles.settingText, styles.adminText]}>Admin Paneli</Text>
             </View>
-            <Icon name="chevron-forward" size={20} color="#8e8e8e" />
+            <Icon name="chevron-forward-outline" size={22} color="#757575" />
           </TouchableOpacity>
         </View>
       )}
@@ -162,10 +162,10 @@ export const SettingsScreen: React.FC = () => {
         
         <TouchableOpacity style={styles.settingItem} onPress={handleAbout}>
           <View style={styles.settingLeft}>
-            <Icon name="information-circle-outline" size={24} color="#000" />
+            <Icon name="information-circle" size={26} color="#424242" />
             <Text style={styles.settingText}>Hakkında</Text>
           </View>
-          <Icon name="chevron-forward" size={20} color="#8e8e8e" />
+          <Icon name="chevron-forward-outline" size={22} color="#757575" />
         </TouchableOpacity>
       </View>
 

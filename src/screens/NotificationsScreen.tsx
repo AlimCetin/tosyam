@@ -42,13 +42,13 @@ export const NotificationsScreen: React.FC = () => {
       case 'like':
         return 'heart';
       case 'comment':
-        return 'chatbubble';
+        return 'chatbubbles';
       case 'follow':
-        return 'person-add';
+        return 'person-add-outline';
       case 'message':
-        return 'mail';
+        return 'mail-outline';
       default:
-        return 'notifications';
+        return 'notifications-outline';
     }
   };
 

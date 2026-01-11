@@ -19,6 +19,11 @@ export const postService = {
     return data.posts ? data : { posts: data, pagination: { page, limit, hasMore: false } };
   },
 
+  getSavedPosts: async (page = 1, limit = 20): Promise<{ posts: Post[]; pagination: any }> => {
+    const { data } = await api.get('/posts/saved', { params: { page, limit } });
+    return data.posts ? data : { posts: data, pagination: { page, limit, hasMore: false } };
+  },
+
   createPost: async (image?: string, caption?: string, isPrivate?: boolean, hiddenFromFollowers?: string[], video?: string) => {
     const { data } = await api.post('/posts', { 
       image, 
