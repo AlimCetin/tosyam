@@ -35,5 +35,5 @@ UserCredentialsSchema.pre('save', async function () {
 
 // Indexes for performance
 // email is already unique (implicit index)
-UserCredentialsSchema.index({ userId: 1 }); // For user lookup
+// userId is already unique (implicit index from unique: true), no need for explicit index
 

@@ -34,6 +34,24 @@ export declare const MessageSchema: import("mongoose").Schema<Message, import("m
     }, "id"> & {
         id: string;
     }> | undefined;
+    text?: import("mongoose").SchemaDefinitionProperty<string, Message, Document<unknown, {}, Message, {
+        id: string;
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Message & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    deletedAt?: import("mongoose").SchemaDefinitionProperty<Date, Message, Document<unknown, {}, Message, {
+        id: string;
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Message & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
     conversationId?: import("mongoose").SchemaDefinitionProperty<string, Message, Document<unknown, {}, Message, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Message & Required<{
@@ -52,25 +70,7 @@ export declare const MessageSchema: import("mongoose").Schema<Message, import("m
     }, "id"> & {
         id: string;
     }> | undefined;
-    text?: import("mongoose").SchemaDefinitionProperty<string, Message, Document<unknown, {}, Message, {
-        id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Message & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
     read?: import("mongoose").SchemaDefinitionProperty<boolean, Message, Document<unknown, {}, Message, {
-        id: string;
-    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Message & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
-    deletedAt?: import("mongoose").SchemaDefinitionProperty<Date, Message, Document<unknown, {}, Message, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Message & Required<{
         _id: import("mongoose").Types.ObjectId;

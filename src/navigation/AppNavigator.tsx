@@ -34,10 +34,15 @@ import { navigationRef } from './navigationRef';
 
 const Stack = createStackNavigator();
 
-export const AppNavigator = () => {
+interface AppNavigatorProps {
+  initialRouteName?: string;
+}
+
+export const AppNavigator: React.FC<AppNavigatorProps> = ({ initialRouteName = 'MainTabs' }) => {
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
+        initialRouteName={initialRouteName}
         screenOptions={{
           headerStyle: {
             backgroundColor: '#fff',
@@ -49,6 +54,16 @@ export const AppNavigator = () => {
             fontWeight: '600',
           },
         }}>
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ 
+            headerShown: true,
+            title: 'Giriş Yap',
+            headerLeft: () => null,
+            gestureEnabled: false,
+          }}
+        />
         <Stack.Screen
           name="MainTabs"
           component={TabNavigator}
@@ -175,16 +190,6 @@ export const AppNavigator = () => {
             presentation: 'transparentModal',
             headerShown: false,
             cardStyle: { backgroundColor: 'transparent' }
-          }}
-        />
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ 
-            headerShown: true,
-            title: 'Giriş Yap',
-            headerLeft: () => null,
-            gestureEnabled: false,
           }}
         />
         <Stack.Screen

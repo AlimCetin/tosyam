@@ -10,6 +10,7 @@ import {
   Alert,
   Text,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -26,6 +27,7 @@ export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
@@ -57,13 +59,19 @@ export const HomeScreen: React.FC = () => {
   const loadFeed = async () => {
     console.log('🔄 Feed yükleniyor...');
     setLoading(true);
+    setError(null);
     try {
       const response = await postService.getFeed();
       const postsData = response.posts || response; // Backward compatibility
       console.log('✅ Feed yüklendi, post sayısı:', postsData?.length || 0);
       setPosts(postsData || []);
-    } catch (error) {
+      if (!postsData || postsData.length === 0) {
+        setError('Henüz gönderi yok. İlk gönderiyi sen paylaş!');
+      }
+    } catch (error: any) {
       console.error('❌ Feed yüklenemedi:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Gönderiler yüklenemedi. Lütfen tekrar deneyin.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -344,6 +352,25 @@ export const HomeScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </View>
+      {error && !loading && (
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle-outline" size={48} color="#8e8e8e" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={loadFeed}
+            activeOpacity={0.7}>
+            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {!error && posts.length === 0 && !loading && (
+        <View style={styles.emptyContainer}>
+          <Icon name="home-outline" size={64} color="#8e8e8e" />
+          <Text style={styles.emptyText}>Henüz gönderi yok</Text>
+          <Text style={styles.emptySubtext}>İlk gönderiyi sen paylaş!</Text>
+        </View>
+      )}
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
@@ -364,6 +391,13 @@ export const HomeScreen: React.FC = () => {
         }}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={loadFeed} />
+        }
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#0095f6" />
+            </View>
+          ) : null
         }
       />
     </SafeAreaView>
@@ -427,5 +461,57 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: '700',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: '#fafafa',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#8e8e8e',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#0095f6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 4,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: '#fafafa',
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#262626',
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#8e8e8e',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: '#fafafa',
   },
 });

@@ -1,5 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { HomeScreen } from '../screens/HomeScreen';
 import { CreateScreen } from '../screens/CreateScreen';
@@ -8,6 +10,8 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 const Tab = createBottomTabNavigator();
 
 export const TabNavigator = () => {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -40,8 +44,8 @@ export const TabNavigator = () => {
         tabBarStyle: {
           borderTopWidth: 1,
           borderTopColor: '#dbdbdb',
-          height: 50,
-          paddingBottom: 5,
+          height: Platform.OS === 'android' ? 50 + insets.bottom : 50,
+          paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 5) : 5,
           paddingTop: 5,
         },
       })}>
