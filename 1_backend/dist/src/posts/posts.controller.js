@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PostsController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
 const posts_service_1 = require("./posts.service");
 const jwt_guard_1 = require("../guards/jwt.guard");
 const not_blocked_guard_1 = require("../common/guards/not-blocked.guard");
@@ -23,13 +24,32 @@ const create_post_dto_1 = require("./dto/create-post.dto");
 const add_comment_dto_1 = require("./dto/add-comment.dto");
 const update_visibility_dto_1 = require("./dto/update-visibility.dto");
 const mongoose_1 = require("mongoose");
+const multer_config_1 = require("../config/multer.config");
 let PostsController = class PostsController {
     postsService;
     constructor(postsService) {
         this.postsService = postsService;
     }
-    async create(body, user) {
-        return this.postsService.create(user._id.toString(), body.image, body.caption || '', body.isPrivate || false, body.hiddenFromFollowers || [], body.video);
+    async uploadMedia(file) {
+        if (!file) {
+            throw new common_1.BadRequestException('File is not provided or invalid type');
+        }
+        const normalizedPath = file.path.replace(/\\/g, '/');
+        const relativePath = normalizedPath.includes('uploads/')
+            ? normalizedPath.substring(normalizedPath.indexOf('uploads/'))
+            : normalizedPath;
+        return { url: `/${relativePath}` };
+    }
+    async create(file, body, user) {
+        let videoUrl = body.video;
+        if (file) {
+            const normalizedPath = file.path.replace(/\\/g, '/');
+            const relativePath = normalizedPath.includes('uploads/')
+                ? normalizedPath.substring(normalizedPath.indexOf('uploads/'))
+                : normalizedPath;
+            videoUrl = `/${relativePath}`;
+        }
+        return this.postsService.create(user._id.toString(), body.image, body.caption || '', body.isPrivate === 'true' || body.isPrivate === true || false, body.hiddenFromFollowers || [], videoUrl);
     }
     async getLikes(postId, user, page, limit) {
         if (!mongoose_1.Types.ObjectId.isValid(postId)) {
@@ -106,11 +126,22 @@ let PostsController = class PostsController {
 };
 exports.PostsController = PostsController;
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
-    __param(1, (0, user_decorator_1.CurrentUser)()),
+    (0, common_1.Post)('upload-media'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', multer_config_1.multerConfig)),
+    __param(0, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_post_dto_1.CreatePostDto, user_entity_1.User]),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], PostsController.prototype, "uploadMedia", null);
+__decorate([
+    (0, common_1.Post)(),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', multer_config_1.multerConfig)),
+    __param(0, (0, common_1.UploadedFile)()),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, create_post_dto_1.CreatePostDto,
+        user_entity_1.User]),
     __metadata("design:returntype", Promise)
 ], PostsController.prototype, "create", null);
 __decorate([

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  Image, 
-  StyleSheet, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  ScrollView,
   TouchableOpacity,
   Alert,
 } from 'react-native';
@@ -14,6 +14,20 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { postService } from '../services/postService';
 import { authService } from '../services/authService';
 import { Post } from '../types';
+import { SOCKET_URL } from '../constants/config';
+
+// Video URL'ini çözümle (relative path ise full URL yap)
+const getVideoUrl = (url: string) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('file:') || url.startsWith('content:') || url.startsWith('data:')) {
+    return url;
+  }
+  // Relative path ise base URL ekle
+  if (url.startsWith('/')) {
+    return `${SOCKET_URL}${url}`;
+  }
+  return url;
+};
 
 export const PostDetailScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -36,30 +50,30 @@ export const PostDetailScreen: React.FC = () => {
   const loadPost = async () => {
     try {
       const postData = await postService.getPostById(postId);
-      
+
       // Check if this is own post
       const currentUser = authService.getCurrentUser() as any;
-      
+
       // Current user ID - try both _id and id
       let currentUserId = '';
       if (currentUser) {
         currentUserId = String(currentUser._id || currentUser.id || '');
       }
-      
+
       // Post userId - backend sends both userId and user.id
       let postUserId = '';
       if (postData) {
         postUserId = String(
-          postData.userId || 
-          (postData as any).user?.id || 
-          (postData as any).user?._id || 
+          postData.userId ||
+          (postData as any).user?.id ||
+          (postData as any).user?._id ||
           ''
         );
       }
-      
+
       // Both must exist and match
       const isOwn = Boolean(currentUserId && postUserId && currentUserId === postUserId);
-      
+
       console.log('🔍 DETAILED Ownership check:', {
         currentUser_id: currentUser?._id,
         currentUser_id_type: typeof currentUser?._id,
@@ -72,7 +86,7 @@ export const PostDetailScreen: React.FC = () => {
         isOwn,
         comparison: `"${currentUserId}" === "${postUserId}"`,
       });
-      
+
       setPost(postData);
       setIsOwnPost(isOwn);
     } catch (error: any) {
@@ -131,12 +145,12 @@ export const PostDetailScreen: React.FC = () => {
       initialIsPrivate: post?.isPrivate || false,
       mode: 'post_visibility'
     });
-    
-    navigation.navigate('SelectHiddenFollowers', { 
-      postId, 
+
+    navigation.navigate('SelectHiddenFollowers', {
+      postId,
       initialHidden: post?.hiddenFromFollowers || [],
       initialIsPrivate: post?.isPrivate || false,
-      mode: 'post_visibility' 
+      mode: 'post_visibility'
     });
   };
 
@@ -154,7 +168,7 @@ export const PostDetailScreen: React.FC = () => {
       {isOwnPost ? (
         <View style={styles.ownPostContainer}>
           {post.video ? (
-            <Video source={{ uri: post.video }} style={styles.image} resizeMode="contain" controls />
+            <Video source={{ uri: getVideoUrl(post.video as string) }} style={styles.image} resizeMode="contain" controls />
           ) : post.image ? (
             <Image source={{ uri: post.image }} style={styles.image} />
           ) : null}
@@ -164,7 +178,7 @@ export const PostDetailScreen: React.FC = () => {
             onPress={() => navigation.navigate('LikesList', { postId })}>
             <Text style={styles.likesText}>{post.likeCount || 0} beğeni</Text>
           </TouchableOpacity>
-          
+
           <View style={styles.ownPostActions}>
             <TouchableOpacity
               style={styles.actionButton}
@@ -174,24 +188,24 @@ export const PostDetailScreen: React.FC = () => {
                 {post.commentCount || 0} Yorum
               </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleVisibilityOptions}>
-              <Icon 
-                name={post.isPrivate ? 'lock-closed-outline' : 'earth-outline'} 
-                size={24} 
-                color="#000" 
+              <Icon
+                name={post.isPrivate ? 'lock-closed-outline' : 'earth-outline'}
+                size={24}
+                color="#000"
               />
               <Text style={styles.actionText}>
-                {post.isPrivate 
-                  ? (post.hiddenFromFollowers && post.hiddenFromFollowers.length > 0 
-                      ? `Takipçiler (${post.hiddenFromFollowers.length} hariç)` 
-                      : 'Takipçiler')
+                {post.isPrivate
+                  ? (post.hiddenFromFollowers && post.hiddenFromFollowers.length > 0
+                    ? `Takipçiler (${post.hiddenFromFollowers.length} hariç)`
+                    : 'Takipçiler')
                   : 'Herkese Açık'}
               </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.actionButton, styles.deleteButton]}
               onPress={handleDelete}>
@@ -210,8 +224,8 @@ export const PostDetailScreen: React.FC = () => {
             style={styles.commentsButton}
             onPress={() => navigation.navigate('Comments', { postId })}>
             <Text style={styles.commentsButtonText}>
-              {(post.commentCount || 0) > 0 
-                ? `${post.commentCount} yorumun tamamını gör` 
+              {(post.commentCount || 0) > 0
+                ? `${post.commentCount} yorumun tamamını gör`
                 : 'Yorum yap'}
             </Text>
           </TouchableOpacity>
@@ -227,7 +241,7 @@ export const PostDetailScreen: React.FC = () => {
                 // ona dönüp params'ı güncelle, yeni ekran açma
                 const routes = navigation.getState()?.routes;
                 const profileRouteIndex = routes?.findIndex((r: any) => r.name === 'Profile');
-                
+
                 if (profileRouteIndex !== undefined && profileRouteIndex >= 0) {
                   // Stack'te Profile var, ona dön ve params'ı güncelle
                   navigation.navigate({
@@ -251,14 +265,14 @@ export const PostDetailScreen: React.FC = () => {
           </View>
 
           {post.video ? (
-            <Video source={{ uri: post.video }} style={styles.image} resizeMode="contain" controls />
+            <Video source={{ uri: getVideoUrl(post.video as string) }} style={styles.image} resizeMode="contain" controls />
           ) : post.image ? (
             <Image source={{ uri: post.image }} style={styles.image} />
           ) : null}
 
           <View style={styles.actions}>
             <View style={styles.actionRow}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={async () => {
                   try {
                     if (post.isLiked) {
@@ -295,9 +309,9 @@ export const PostDetailScreen: React.FC = () => {
                   console.error('Kaydetme hatası:', error);
                 }
               }}>
-              <Icon 
-                name={post.isSaved ? 'ribbon' : 'ribbon-outline'} 
-                size={27} 
+              <Icon
+                name={post.isSaved ? 'ribbon' : 'ribbon-outline'}
+                size={27}
                 color={post.isSaved ? '#9C27B0' : '#424242'}
               />
             </TouchableOpacity>

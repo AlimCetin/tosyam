@@ -16,6 +16,21 @@ import { userService } from '../services/userService';
 import { postService } from '../services/postService';
 import { authService } from '../services/authService';
 import { User, Post } from '../types';
+import Video from 'react-native-video';
+import { SOCKET_URL } from '../constants/config';
+
+// Video URL'ini çözümle (relative path ise full URL yap)
+const getVideoUrl = (url: string) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('file:') || url.startsWith('content:') || url.startsWith('data:')) {
+    return url;
+  }
+  // Relative path ise base URL ekle
+  if (url.startsWith('/')) {
+    return `${SOCKET_URL}${url}`;
+  }
+  return url;
+};
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -28,13 +43,13 @@ export const ProfileScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       const routeUserId = route?.params?.userId;
-      
+
       // Eğer route params'ında userId yoksa veya 'current-user-id'/'me' ise kendi profilini göster
       // Aksi halde başkasının profilini göster
       const targetUserId = (!routeUserId || routeUserId === 'current-user-id' || routeUserId === 'me')
         ? 'current-user-id'
         : routeUserId;
-      
+
       loadProfile(targetUserId);
     }, [route?.params?.userId])
   );
@@ -44,21 +59,21 @@ export const ProfileScreen: React.FC = () => {
       // Mevcut kullanıcıyı al
       const currentUser = authService.getCurrentUser() as any;
       const currentUserId = currentUser?._id || currentUser?.id;
-      
+
       // userId 'current-user-id' veya 'me' ise mevcut kullanıcıyı al
       const isViewingOwnProfile = userId === 'current-user-id' || userId === 'me';
       const targetUserId = isViewingOwnProfile ? 'me' : userId;
-      
+
       const userData = await userService.getUser(targetUserId);
       const postsResponse = await postService.getUserPosts(targetUserId);
       const postsData = postsResponse.posts || postsResponse; // Backward compatibility
-      
+
       // Normalize posts (add isHidden if not present)
       const normalizedPosts = (Array.isArray(postsData) ? postsData : []).map((post: any) => ({
         ...post,
         isHidden: post.isHidden ?? false,
       }));
-      
+
       console.log('👤 Backend\'den gelen user data:', {
         id: (userData as any)._id || userData.id,
         followerCount: userData.followerCount,
@@ -67,7 +82,7 @@ export const ProfileScreen: React.FC = () => {
         followers: (userData as any).followers?.length,
         following: (userData as any).following?.length,
       });
-      
+
       // Backend'den gelen user objesini normalize et (_id -> id)
       const normalizedUser: User = {
         ...userData,
@@ -76,21 +91,21 @@ export const ProfileScreen: React.FC = () => {
         followingCount: userData.followingCount ?? ((userData as any).following?.length || 0),
         isFollowing: userData.isFollowing ?? false,
       };
-      
+
       console.log('✅ Normalize edilmiş user:', {
         id: normalizedUser.id,
         followerCount: normalizedUser.followerCount,
         followingCount: normalizedUser.followingCount,
         isFollowing: normalizedUser.isFollowing,
       });
-      
+
       setUser(normalizedUser);
       setPosts(normalizedPosts);
-      
+
       // Kendi profili mi kontrol et
       const userDataId = normalizedUser.id;
       const isOwn = isViewingOwnProfile || (currentUserId && userDataId === currentUserId);
-      
+
       setIsOwnProfile(isOwn);
     } catch (error) {
       console.error('Profil yüklenemedi:', error);
@@ -102,17 +117,17 @@ export const ProfileScreen: React.FC = () => {
     try {
       if (user.isFollowing) {
         await userService.unfollowUser(user.id);
-        setUser({ 
-          ...user, 
-          isFollowing: false, 
-          followerCount: Math.max(0, (user.followerCount || 0) - 1) 
+        setUser({
+          ...user,
+          isFollowing: false,
+          followerCount: Math.max(0, (user.followerCount || 0) - 1)
         });
       } else {
         await userService.followUser(user.id);
-        setUser({ 
-          ...user, 
-          isFollowing: true, 
-          followerCount: (user.followerCount || 0) + 1 
+        setUser({
+          ...user,
+          isFollowing: true,
+          followerCount: (user.followerCount || 0) + 1
         });
       }
     } catch (error: any) {
@@ -158,19 +173,19 @@ export const ProfileScreen: React.FC = () => {
             onPress={() => {
               // Kendi profiliyse her zaman göster
               if (isOwnProfile) {
-                const targetUserId = user.id === 'current-user-id' || user.id === 'me' 
-                  ? 'current-user-id' 
+                const targetUserId = user.id === 'current-user-id' || user.id === 'me'
+                  ? 'current-user-id'
                   : user.id;
                 navigation.navigate('FollowList', { userId: targetUserId, type: 'followers' });
                 return;
               }
-              
+
               // Başkasının profili ve gizliyse
               if (user.hideFollowers) {
                 Alert.alert('Gizli', 'Bu kullanıcı takipçi listesini gizlemiş');
                 return;
               }
-              
+
               const targetUserId = user.id;
               navigation.navigate('FollowList', { userId: targetUserId, type: 'followers' });
             }}>
@@ -184,19 +199,19 @@ export const ProfileScreen: React.FC = () => {
             onPress={() => {
               // Kendi profiliyse her zaman göster
               if (isOwnProfile) {
-                const targetUserId = user.id === 'current-user-id' || user.id === 'me' 
-                  ? 'current-user-id' 
+                const targetUserId = user.id === 'current-user-id' || user.id === 'me'
+                  ? 'current-user-id'
                   : user.id;
                 navigation.navigate('FollowList', { userId: targetUserId, type: 'following' });
                 return;
               }
-              
+
               // Başkasının profili ve gizliyse
               if (user.hideFollowing) {
                 Alert.alert('Gizli', 'Bu kullanıcı takip edilen listesini gizlemiş');
                 return;
               }
-              
+
               const targetUserId = user.id;
               navigation.navigate('FollowList', { userId: targetUserId, type: 'following' });
             }}>
@@ -274,8 +289,17 @@ export const ProfileScreen: React.FC = () => {
             style={styles.postThumb}
             onPress={() => navigation.navigate('PostDetail', { postId: item.id })}>
             {item.video ? (
-              <View style={[styles.thumbImage, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }]}>
-                <Icon name="play-circle" size={32} color="#fff" />
+              <View style={[styles.thumbImage, { backgroundColor: '#000' }]}>
+                <Video
+                  source={{ uri: getVideoUrl(item.video as string) }}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode="cover"
+                  paused={true}
+                  muted={true}
+                />
+                <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.1)' }]}>
+                  <Icon name="play-circle" size={32} color="rgba(255,255,255,0.8)" />
+                </View>
               </View>
             ) : (
               <Image source={{ uri: item.image || '' }} style={styles.thumbImage} />

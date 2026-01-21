@@ -30,7 +30,7 @@ __decorate([
     __metadata("design:type", String)
 ], Post.prototype, "userId", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true }),
+    (0, mongoose_1.Prop)({ required: false }),
     __metadata("design:type", String)
 ], Post.prototype, "image", void 0);
 __decorate([

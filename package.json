@@ -11,6 +11,7 @@
     "generate-icons": "node scripts/generate-app-icons.js"
   },
   "dependencies": {
+    "@react-native-community/netinfo": "^11.4.1",
     "@react-native/new-app-screen": "0.80.2",
     "@react-navigation/bottom-tabs": "^6.5.11",
     "@react-navigation/native": "^6.1.9",
@@ -23,7 +24,7 @@
     "react-native-image-crop-picker": "^0.40.3",
     "react-native-image-picker": "^8.2.1",
     "react-native-mmkv": "^2.11.0",
-    "react-native-safe-area-context": "^4.8.2",
+    "react-native-safe-area-context": "^5.6.2",
     "react-native-screens": "^3.29.0",
     "react-native-share": "^10.0.2",
     "react-native-vector-icons": "^10.0.3",

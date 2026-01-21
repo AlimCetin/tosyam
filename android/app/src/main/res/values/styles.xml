@@ -4,6 +4,27 @@
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <!-- Status bar configuration -->
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+    </style>
+
+    <!-- UCrop (Image Cropper) Activity Theme -->
+    <style name="UCrop.Theme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Status bar -->
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        
+        <!-- Toolbar -->
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:fitsSystemWindows">true</item>
+        
+        <!-- Colors -->
+        <item name="colorPrimary">@android:color/black</item>
+        <item name="colorPrimaryDark">@android:color/black</item>
+        <item name="colorAccent">@android:color/white</item>
     </style>
 
 </resources>

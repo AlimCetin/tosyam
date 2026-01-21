@@ -18,7 +18,7 @@ export class PostsService {
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Ad.name) private adModel: Model<Ad>,
     private readonly redisService: RedisService,
-  ) {}
+  ) { }
 
   async create(
     userId: string,
@@ -34,7 +34,7 @@ export class PostsService {
 
     const post = await this.postModel.create({
       userId,
-      image: image || '',
+      image: image || undefined,
       video: video || undefined,
       caption,
       isPrivate: isPrivate || false,
@@ -133,7 +133,7 @@ export class PostsService {
   async getFeed(userId: string, page: number = 1, limit: number = 20) {
     // Cache key: feed:userId:page:limit
     const cacheKey = `feed:${userId}:${page}:${limit}`;
-    
+
     // Try to get from cache first
     const cached = await this.redisService.get(cacheKey);
     if (cached) {
@@ -142,13 +142,13 @@ export class PostsService {
 
     const user = await this.userModel.findOne({ _id: userId, deletedAt: null }).select('following blockedUsers savedPosts role');
     if (!user) throw new NotFoundException('User not found');
-    
+
     const following = [...user.following, userId];
-    
+
     // Exclude blocked users from feed
     const blockedUsers = user.blockedUsers || [];
     const followingNotBlocked = following.filter(id => !blockedUsers.includes(id));
-    
+
     // Also exclude users who have blocked the current user
     const usersWhoBlockedMe = await this.userModel.find({
       _id: { $in: following },
@@ -157,12 +157,12 @@ export class PostsService {
     }).select('_id').lean();
     const blockedByUserIds = usersWhoBlockedMe.map(u => u._id.toString());
     const finalFollowing = followingNotBlocked.filter(id => !blockedByUserIds.includes(id));
-    
+
     // Pagination
     const skip = (page - 1) * limit;
     const maxLimit = Math.min(limit, 50); // Maximum 50 posts per request
-    
-    const posts = await this.postModel.find({ 
+
+    const posts = await this.postModel.find({
       userId: { $in: finalFollowing },
       deletedAt: null, // Soft delete kontrolü
       $or: [
@@ -177,32 +177,32 @@ export class PostsService {
       .skip(skip)
       .limit(maxLimit)
       .lean();
-    
+
     const savedPosts = user.savedPosts?.map((id: any) => id.toString()) || [];
-    
+
     // Filter private posts - only show if user is following the post owner and not in hiddenFromFollowers
     const filteredPosts = posts.filter((post: any) => {
       const postOwnerId = (post.userId?._id || post.userId)?.toString();
-      
+
       // Own posts always visible
       if (postOwnerId === userId) return true;
-      
+
       // If post is private, check if current user is following and not hidden
       if (post.isPrivate) {
         const isFollowing = finalFollowing.includes(postOwnerId);
         const isHiddenFrom = post.hiddenFromFollowers?.some((id: any) => id.toString() === userId) || false;
         return isFollowing && !isHiddenFrom;
       }
-      
+
       return true;
     });
-    
+
     const formattedPosts = filteredPosts.map((post: any) => {
       const populatedUserId = post.userId?._id || post.userId;
-      const userData = post.userId?._id 
-        ? post.userId 
+      const userData = post.userId?._id
+        ? post.userId
         : { _id: populatedUserId, fullName: '', avatar: null };
-      
+
       return {
         id: post._id.toString(),
         type: 'post',
@@ -241,7 +241,7 @@ export class PostsService {
       console.error('Error fetching ads:', error);
       // Continue without ads if there's an error
     }
-    
+
     // Insert ads every 5 posts (configurable)
     const AD_INTERVAL = 5;
     const result: any[] = [];
@@ -249,7 +249,7 @@ export class PostsService {
 
     for (let i = 0; i < formattedPosts.length; i++) {
       result.push(formattedPosts[i]);
-      
+
       // Insert ad after every AD_INTERVAL posts
       if ((i + 1) % AD_INTERVAL === 0 && activeAds.length > 0) {
         const ad = activeAds[adIndex % activeAds.length];
@@ -263,14 +263,14 @@ export class PostsService {
           adType: ad.type,
           createdAt: ad.createdAt,
         });
-        
+
         // Record impression asynchronously (don't wait)
         this.adModel.findByIdAndUpdate(ad._id, {
           $inc: { impressionCount: 1 },
         }).catch(err => {
           console.error('Error recording ad impression:', err);
         });
-        
+
         adIndex++;
       }
     }
@@ -316,28 +316,28 @@ export class PostsService {
       if (!postOwner) {
         throw new NotFoundException('User not found');
       }
-      
+
       if (postOwner.blockedUsers?.includes(currentUserId)) {
         throw new ForbiddenException('You are blocked by this user');
       }
-      
+
       // Check if current user has blocked post owner
       const currentUser = await this.userModel.findOne({ _id: currentUserId, deletedAt: null }).select('blockedUsers savedPosts').lean();
       if (currentUser?.blockedUsers?.includes(userId)) {
         throw new ForbiddenException('You have blocked this user');
       }
     }
-    
+
     // Pagination
     const skip = (page - 1) * limit;
     const maxLimit = Math.min(limit, 50); // Maximum 50 posts per request
-    
+
     // If viewing own profile, show all posts. Otherwise, hide hidden posts
     const query: any = { userId, deletedAt: null }; // Soft delete kontrolü
     if (currentUserId !== userId) {
       query.isHidden = { $ne: true };
     }
-    
+
     const posts = await this.postModel.find(query)
       .populate('userId', 'fullName avatar')
       .select('userId image video caption likes commentCount createdAt isHidden isPrivate hiddenFromFollowers')
@@ -345,7 +345,7 @@ export class PostsService {
       .skip(skip)
       .limit(maxLimit)
       .lean();
-    
+
     // Filter private posts if viewing someone else's profile
     let filteredPosts = posts;
     if (currentUserId && currentUserId !== userId) {
@@ -354,9 +354,9 @@ export class PostsService {
       if (!postOwner) {
         throw new NotFoundException('User not found');
       }
-      
+
       const isFollowing = postOwner?.followers?.some((id: any) => id.toString() === currentUserId) || false;
-      
+
       filteredPosts = posts.filter((post: any) => {
         // If post is private, only show if following and not in hiddenFromFollowers
         if (post.isPrivate) {
@@ -364,7 +364,7 @@ export class PostsService {
             // Not following, don't show private posts
             return false;
           }
-          
+
           // Check if current user is in hiddenFromFollowers list
           const hiddenFromFollowers = post.hiddenFromFollowers || [];
           const isHiddenFrom = hiddenFromFollowers.some((id: any) => {
@@ -372,7 +372,7 @@ export class PostsService {
             const currentId = currentUserId.toString();
             return hiddenId === currentId;
           });
-          
+
           // Show only if following AND not hidden from
           return !isHiddenFrom;
         }
@@ -380,20 +380,20 @@ export class PostsService {
         return true;
       });
     }
-    
+
     let savedPosts: string[] = [];
     if (currentUserId) {
       const user = await this.userModel.findOne({ _id: currentUserId, deletedAt: null }).select('savedPosts').lean();
       savedPosts = user?.savedPosts?.map((id: any) => id.toString()) || [];
     }
-    
+
     return {
       posts: filteredPosts.map((post: any) => {
         const populatedUserId = post.userId?._id || post.userId;
-        const userData = post.userId?._id 
-          ? post.userId 
+        const userData = post.userId?._id
+          ? post.userId
           : { _id: populatedUserId, fullName: '', avatar: null };
-        
+
         return {
           id: post._id.toString(),
           userId: populatedUserId.toString(),
@@ -444,11 +444,11 @@ export class PostsService {
       if (!postOwner) {
         throw new NotFoundException('Post owner not found');
       }
-      
+
       if (postOwner.blockedUsers?.includes(currentUserId)) {
         throw new ForbiddenException('You are blocked by this user');
       }
-      
+
       // Check if current user has blocked post owner
       const currentUser = await this.userModel.findOne({ _id: currentUserId, deletedAt: null }).select('blockedUsers savedPosts').lean();
       if (currentUser?.blockedUsers?.includes(postOwnerId)) {
@@ -465,7 +465,7 @@ export class PostsService {
         // Check if current user is following the post owner
         const postOwnerWithFollowers = await this.userModel.findOne({ _id: postOwnerId, deletedAt: null }).select('followers').lean();
         const isFollowing = postOwnerWithFollowers?.followers?.some((id: any) => id.toString() === currentUserId) || false;
-        
+
         if (!isFollowing) {
           throw new ForbiddenException('This post is only visible to followers');
         }
@@ -489,10 +489,10 @@ export class PostsService {
     const savedPosts = currentUser?.savedPosts?.map((id: any) => id.toString()) || [];
 
     const populatedUserId = (post.userId as any)?._id || post.userId;
-    const userDataRaw = (post.userId as any)?._id 
-      ? post.userId 
+    const userDataRaw = (post.userId as any)?._id
+      ? post.userId
       : { _id: populatedUserId, fullName: '', avatar: null };
-    
+
     const userData = userDataRaw as any;
 
     return {
@@ -531,19 +531,19 @@ export class PostsService {
     const isLiked = post.likes.some((id: any) => id.toString() === userId);
     if (!isLiked) {
       await this.postModel.updateOne({ _id: postId }, { $addToSet: { likes: userId } });
-      
+
       // Post sahibinin ID'sini string olarak al (populate edilmiş olabilir)
-      const postOwnerId = (post.userId as any)?._id 
-        ? (post.userId as any)._id.toString() 
+      const postOwnerId = (post.userId as any)?._id
+        ? (post.userId as any)._id.toString()
         : post.userId.toString();
-      
+
       if (postOwnerId !== userId) {
-        console.log('📬 Like bildirimi oluşturuluyor:', { 
-          postOwnerId, 
-          fromUserId: userId, 
-          postId 
+        console.log('📬 Like bildirimi oluşturuluyor:', {
+          postOwnerId,
+          fromUserId: userId,
+          postId
         });
-        
+
         await this.notificationModel.create({
           userId: postOwnerId,
           fromUserId: userId,
@@ -582,7 +582,7 @@ export class PostsService {
     // Pagination
     const skip = (page - 1) * limit;
     const maxLimit = Math.min(limit, 50); // Maximum 50 comments per request
-    
+
     const comments = await this.commentModel.find({ postId, deletedAt: null }) // Soft delete kontrolü
       .populate('userId', 'fullName avatar')
       .select('userId text createdAt')
@@ -590,14 +590,14 @@ export class PostsService {
       .skip(skip)
       .limit(maxLimit)
       .lean();
-    
+
     return {
       comments: comments.map((comment: any) => {
         const populatedUserId = comment.userId?._id || comment.userId;
-        const userData = comment.userId?._id 
-          ? comment.userId 
+        const userData = comment.userId?._id
+          ? comment.userId
           : { _id: populatedUserId, fullName: '', avatar: null };
-        
+
         return {
           id: comment._id.toString(),
           userId: populatedUserId.toString(),
@@ -633,17 +633,17 @@ export class PostsService {
     await this.postModel.updateOne({ _id: postId }, { $inc: { commentCount: 1 } });
 
     // Post sahibinin ID'sini string olarak al (populate edilmiş olabilir)
-    const postOwnerId = (post.userId as any)?._id 
-      ? (post.userId as any)._id.toString() 
+    const postOwnerId = (post.userId as any)?._id
+      ? (post.userId as any)._id.toString()
       : post.userId.toString();
 
     if (postOwnerId !== userId) {
-      console.log('📬 Comment bildirimi oluşturuluyor:', { 
-        postOwnerId, 
-        fromUserId: userId, 
-        postId 
+      console.log('📬 Comment bildirimi oluşturuluyor:', {
+        postOwnerId,
+        fromUserId: userId,
+        postId
       });
-      
+
       await this.notificationModel.create({
         userId: postOwnerId,
         fromUserId: userId,
@@ -664,10 +664,10 @@ export class PostsService {
 
     const populatedComment = await comment.populate('userId', 'fullName avatar');
     const populatedUserId = (populatedComment as any).userId._id || (populatedComment as any).userId;
-    const userData = typeof (populatedComment as any).userId === 'object' && (populatedComment as any).userId._id 
-      ? (populatedComment as any).userId 
+    const userData = typeof (populatedComment as any).userId === 'object' && (populatedComment as any).userId._id
+      ? (populatedComment as any).userId
       : { _id: populatedUserId, fullName: '', avatar: null };
-    
+
     return {
       id: populatedComment._id.toString(),
       userId: populatedUserId.toString(),
@@ -714,7 +714,7 @@ export class PostsService {
     }
 
     const savedPostIds = user.savedPosts?.map((id: any) => id.toString()) || [];
-    
+
     if (savedPostIds.length === 0) {
       return {
         posts: [],
@@ -817,57 +817,57 @@ export class PostsService {
   async hidePost(postId: string, userId: string) {
     const post = await this.postModel.findOne({ _id: postId, deletedAt: null });
     if (!post) throw new NotFoundException('Post not found');
-    
+
     if (post.userId.toString() !== userId) {
       throw new ForbiddenException('You can only hide your own posts');
     }
-    
+
     post.isHidden = true;
     await post.save();
-    
+
     return { message: 'Post hidden successfully' };
   }
 
   async unhidePost(postId: string, userId: string) {
     const post = await this.postModel.findOne({ _id: postId, deletedAt: null });
     if (!post) throw new NotFoundException('Post not found');
-    
+
     if (post.userId.toString() !== userId) {
       throw new ForbiddenException('You can only unhide your own posts');
     }
-    
+
     post.isHidden = false;
     await post.save();
-    
+
     return { message: 'Post unhidden successfully' };
   }
 
   async deletePost(postId: string, userId: string) {
     const post = await this.postModel.findOne({ _id: postId, deletedAt: null });
     if (!post) throw new NotFoundException('Post not found');
-    
+
     if (post.userId.toString() !== userId) {
       throw new ForbiddenException('You can only delete your own posts');
     }
-    
+
     // Soft delete all comments
     await this.commentModel.updateMany(
       { postId, deletedAt: null },
       { $set: { deletedAt: new Date() } }
     );
-    
+
     // Soft delete all notifications related to this post
     await this.notificationModel.updateMany(
       { postId, deletedAt: null },
       { $set: { deletedAt: new Date() } }
     );
-    
+
     // Remove post from all users' savedPosts
     await this.userModel.updateMany(
       { savedPosts: postId },
       { $pull: { savedPosts: postId } }
     );
-    
+
     // Soft delete the post
     await this.postModel.updateOne(
       { _id: postId },
@@ -876,7 +876,7 @@ export class PostsService {
 
     // Invalidate feed cache for the post owner
     await this.invalidateFeedCache(userId);
-    
+
     return { message: 'Post deleted successfully' };
   }
 

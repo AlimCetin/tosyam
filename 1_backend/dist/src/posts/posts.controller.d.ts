@@ -7,7 +7,10 @@ import { Types } from 'mongoose';
 export declare class PostsController {
     private postsService;
     constructor(postsService: PostsService);
-    create(body: CreatePostDto, user: User): Promise<import("mongoose").Document<unknown, {}, import("../entities/post.entity").Post, {}, import("mongoose").DefaultSchemaOptions> & import("../entities/post.entity").Post & Required<{
+    uploadMedia(file: Express.Multer.File): Promise<{
+        url: string;
+    }>;
+    create(file: Express.Multer.File, body: CreatePostDto, user: User): Promise<import("mongoose").Document<unknown, {}, import("../entities/post.entity").Post, {}, import("mongoose").DefaultSchemaOptions> & import("../entities/post.entity").Post & Required<{
         _id: Types.ObjectId;
     }> & {
         __v: number;

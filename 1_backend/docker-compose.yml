@@ -61,6 +61,7 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
     volumes:
       - ./logs:/app/logs
+      - ./uploads:/app/uploads
     depends_on:
       mongodb:
         condition: service_healthy

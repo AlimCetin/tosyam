@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -30,24 +30,47 @@ export const HomeScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [visiblePostIds, setVisiblePostIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadFeed();
   }, []);
 
-  // Ekrana her dönüldüğünde okunmamış bildirim ve mesaj sayısını yükle
+  // Ekrana her dönüldüğünde feed'i ve okunmamış sayıları yenile
   useFocusEffect(
     React.useCallback(() => {
+      loadFeed();
       loadUnreadCounts();
     }, [])
   );
+
+  // Belirli aralıklarla otomatik yenileme (30 saniyede bir)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadFeed();
+      loadUnreadCounts();
+    }, 30000); // 30 saniye
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+    waitForInteraction: false,
+    minimumViewTime: 100,
+  }).current;
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    const visibleIds = viewableItems.map((item: any) => item.item.id);
+    setVisiblePostIds(visibleIds);
+  }).current;
 
   const loadUnreadCounts = async () => {
     try {
       // Bildirim sayısını yükle
       const notificationCount = await notificationService.getUnreadCount();
       setUnreadNotifications(notificationCount);
-      
+
       // Mesaj sayısını yükle
       const messageCount = await messageService.getUnreadCount();
       setUnreadMessages(messageCount);
@@ -93,10 +116,10 @@ export const HomeScreen: React.FC = () => {
       posts.map((p) =>
         p.id === postId
           ? {
-              ...p,
-              isLiked: !wasLiked,
-              likeCount: wasLiked ? p.likeCount - 1 : p.likeCount + 1,
-            }
+            ...p,
+            isLiked: !wasLiked,
+            likeCount: wasLiked ? (p.likeCount || 0) - 1 : (p.likeCount || 0) + 1,
+          }
           : p
       )
     );
@@ -114,16 +137,16 @@ export const HomeScreen: React.FC = () => {
     } catch (error: any) {
       console.error('❌ Beğeni hatası:', error);
       console.error('❌ Hata detayı:', error.response?.data || error.message);
-      
+
       // Hata durumunda geri al (rollback)
       setPosts(
         posts.map((p) =>
           p.id === postId
             ? {
-                ...p,
-                isLiked: wasLiked,
-                likeCount: wasLiked ? p.likeCount + 1 : p.likeCount - 1,
-              }
+              ...p,
+              isLiked: wasLiked,
+              likeCount: wasLiked ? (p.likeCount || 0) + 1 : (p?.likeCount || 0) - 1,
+            }
             : p
         )
       );
@@ -146,9 +169,9 @@ export const HomeScreen: React.FC = () => {
       posts.map((p) =>
         p.id === postId
           ? {
-              ...p,
-              isSaved: !wasSaved,
-            }
+            ...p,
+            isSaved: !wasSaved,
+          }
           : p
       )
     );
@@ -166,15 +189,15 @@ export const HomeScreen: React.FC = () => {
     } catch (error: any) {
       console.error('❌ Kaydet hatası:', error);
       console.error('❌ Hata detayı:', error.response?.data || error.message);
-      
+
       // Hata durumunda geri al
       setPosts(
         posts.map((p) =>
           p.id === postId
             ? {
-                ...p,
-                isSaved: wasSaved,
-              }
+              ...p,
+              isSaved: wasSaved,
+            }
             : p
         )
       );
@@ -191,7 +214,7 @@ export const HomeScreen: React.FC = () => {
 
     try {
       const username = post.user?.username || post.user?.fullName || 'Kullanıcı';
-      const shareMessage = post.caption 
+      const shareMessage = post.caption
         ? `${username} bir gönderi paylaştı: ${post.caption}`
         : `${username} bir gönderi paylaştı`;
 
@@ -200,46 +223,46 @@ export const HomeScreen: React.FC = () => {
         const mediaData = post.image || post.video;
         let filePath = '';
         let shouldCleanup = false;
-        
+
         // Base64 string'i kontrol et ve işle
         if (mediaData && mediaData.startsWith('data:')) {
           // Base64 formatından dosya tipini ve data'yı ayır
           const base64Data = mediaData.split(',')[1];
           const mimeType = mediaData.split(';')[0].split(':')[1];
           const extension = mimeType.split('/')[1];
-          
+
           // Geçici dosya oluştur
           const fileName = `share_${Date.now()}.${extension}`;
           filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
-          
+
           // Base64'ü dosyaya yaz
           await RNFS.writeFile(filePath, base64Data, 'base64');
           shouldCleanup = true;
-          
+
           console.log('✅ Base64 dosyaya yazıldı:', filePath);
         } else if (mediaData && (mediaData.startsWith('http://') || mediaData.startsWith('https://'))) {
           // HTTP/HTTPS URL'si ise indir
           const extension = mediaData.includes('.mp4') || post.video ? 'mp4' : 'jpg';
           const fileName = `share_${Date.now()}.${extension}`;
           filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
-          
+
           console.log('📥 URL indiriliyor:', mediaData);
           const downloadResult = await RNFS.downloadFile({
             fromUrl: mediaData,
             toFile: filePath,
           }).promise;
-          
+
           if (downloadResult.statusCode !== 200) {
             throw new Error('Görsel indirilemedi');
           }
-          
+
           shouldCleanup = true;
           console.log('✅ URL indirildi:', filePath);
         } else {
           // Yerel dosya yolu
           filePath = mediaData || '';
         }
-        
+
         // Paylaşım seçenekleri - sistem menüsü direkt açılır
         const shareOptions: any = {
           title: 'Paylaş',
@@ -252,7 +275,7 @@ export const HomeScreen: React.FC = () => {
         // Sistem paylaşım menüsünü aç (tüm uygulamalar görünür)
         await Share.open(shareOptions);
         console.log('✅ Gönderi paylaşıldı');
-        
+
         // Paylaşım tamamlandıktan sonra geçici dosyayı temizle
         if (shouldCleanup) {
           setTimeout(async () => {
@@ -267,7 +290,7 @@ export const HomeScreen: React.FC = () => {
             }
           }, 2000); // 2 saniye bekle
         }
-        
+
       } else {
         // Sadece metin paylaş
         await Share.open({
@@ -386,12 +409,15 @@ export const HomeScreen: React.FC = () => {
               onSave={handleSave}
               onShare={handleShare}
               onProfilePress={handleProfilePress}
+              isVisible={visiblePostIds.includes(item.id)}
             />
           );
         }}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={loadFeed} />
         }
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         ListEmptyComponent={
           loading ? (
             <View style={styles.loadingContainer}>

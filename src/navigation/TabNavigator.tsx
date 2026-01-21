@@ -11,7 +11,7 @@ const Tab = createBottomTabNavigator();
 
 export const TabNavigator = () => {
   const insets = useSafeAreaInsets();
-  
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -49,13 +49,13 @@ export const TabNavigator = () => {
           paddingTop: 5,
         },
       })}>
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
         options={{ title: 'Ana Sayfa' }}
       />
-      <Tab.Screen 
-        name="Create" 
+      <Tab.Screen
+        name="Create"
         component={CreateScreen}
         options={{ title: 'Oluştur' }}
       />
@@ -63,16 +63,9 @@ export const TabNavigator = () => {
         name="ProfileTab"
         component={ProfileScreen}
         options={{
-          tabBarLabel: 'Profil',
+          title: 'Profil',
         }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            // Varsayılan davranışı engelle
-            e.preventDefault();
-            // Stack Navigator'daki Profile ekranına git (header ile)
-            navigation.navigate('Profile', { userId: 'current-user-id' });
-          },
-        })}
+
       />
     </Tab.Navigator>
   );

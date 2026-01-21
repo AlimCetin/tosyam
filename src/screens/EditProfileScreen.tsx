@@ -10,6 +10,7 @@ import {
   Image,
   ActivityIndicator,
   Platform,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ImagePicker from 'react-native-image-crop-picker';
@@ -37,7 +38,7 @@ export const EditProfileScreen: React.FC = () => {
       setLoading(true);
       const currentUser = authService.getCurrentUser();
       const userData = await userService.getUser('me');
-      
+
       setUser(userData);
       setFullName(userData.fullName || '');
       setBio(userData.bio || '');
@@ -57,12 +58,19 @@ export const EditProfileScreen: React.FC = () => {
       cropping: true,
       cropperCircleOverlay: true,
       compressImageQuality: 0.8,
-      includeBase64: true, // Base64 formatında al
+      includeBase64: true,
+      cropperStatusBarColor: '#000000',
+      cropperToolbarColor: '#000000',
+      cropperToolbarWidgetColor: '#ffffff',
+      cropperToolbarTitle: 'Resmi Düzenle',
+      enableRotationGesture: true,
+      freeStyleCropEnabled: false,
+      hideBottomControls: false,
     })
       .then((image) => {
-        if (image.data) {
-          // Base64 string olarak kaydet (data:image/jpeg;base64,... formatında)
-          const base64Image = `data:${image.mime};base64,${image.data}`;
+        const img = image as any;
+        if (img.data) {
+          const base64Image = `data:${img.mime};base64,${img.data}`;
           setSelectedImage(base64Image);
           setAvatarUri(base64Image);
         }
@@ -93,7 +101,7 @@ export const EditProfileScreen: React.FC = () => {
 
     try {
       setSaving(true);
-      
+
       // Seçilen resmi kullan
       let avatarUrl = avatarUri;
       if (selectedImage) {
@@ -132,70 +140,72 @@ export const EditProfileScreen: React.FC = () => {
   const hasAvatar = !!avatarUri;
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.avatarSection}>
-          <TouchableOpacity
-            style={styles.avatarContainer}
-            onPress={pickImage}
-            activeOpacity={0.8}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarPreview} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Icon name="person" size={40} color="#8e8e8e" />
-              </View>
-            )}
-            <View style={[styles.avatarIconContainer, hasAvatar && styles.avatarIconContainerWithImage]}>
-              {hasAvatar ? (
-                <Icon name="create-outline" size={20} color="#fff" />
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        <View style={styles.content}>
+          <View style={styles.avatarSection}>
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={pickImage}
+              activeOpacity={0.8}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarPreview} />
               ) : (
-                <Icon name="add-circle" size={24} color="#0095f6" />
+                <View style={styles.avatarPlaceholder}>
+                  <Icon name="person" size={40} color="#8e8e8e" />
+                </View>
               )}
-            </View>
+              <View style={[styles.avatarIconContainer, hasAvatar && styles.avatarIconContainerWithImage]}>
+                {hasAvatar ? (
+                  <Icon name="create-outline" size={20} color="#fff" />
+                ) : (
+                  <Icon name="add-circle" size={24} color="#0095f6" />
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Ad Soyad</Text>
+            <TextInput
+              style={styles.input}
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Ad Soyad"
+              maxLength={50}
+              autoCapitalize="words"
+            />
+            <Text style={styles.charCount}>{fullName.length}/50</Text>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Bio</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Hakkında"
+              maxLength={150}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            <Text style={styles.charCount}>{bio.length}/150</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}>
+            {saving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Kaydet</Text>
+            )}
           </TouchableOpacity>
         </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Ad Soyad</Text>
-          <TextInput
-            style={styles.input}
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Ad Soyad"
-            maxLength={50}
-            autoCapitalize="words"
-          />
-          <Text style={styles.charCount}>{fullName.length}/50</Text>
-        </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Bio</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={bio}
-            onChangeText={setBio}
-            placeholder="Hakkında"
-            maxLength={150}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-          <Text style={styles.charCount}>{bio.length}/150</Text>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={saving}>
-          {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.saveButtonText}>Kaydet</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 

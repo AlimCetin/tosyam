@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   Switch,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -26,16 +27,16 @@ export const SettingsScreen: React.FC = () => {
   const checkAdminStatus = async () => {
     try {
       // Önce storage'dan kontrol et, yoksa API'den çek
-      let currentUser = authService.getCurrentUser();
+      let currentUser = authService.getCurrentUser() as any;
       if (!currentUser || !currentUser.role) {
-        currentUser = await userService.getCurrentUser();
+        currentUser = await userService.getCurrentUser() as any;
       }
       const isAdminUser = currentUser?.role === 'admin' || currentUser?.role === 'super_admin' || currentUser?.role === 'moderator';
       setIsAdmin(isAdminUser || false);
     } catch (error) {
       console.error('Admin durumu kontrol edilemedi:', error);
       // Hata durumunda storage'dan tekrar kontrol et
-      const storedUser = authService.getCurrentUser();
+      const storedUser = authService.getCurrentUser() as any;
       if (storedUser?.role) {
         const isAdminUser = storedUser.role === 'admin' || storedUser.role === 'super_admin' || storedUser.role === 'moderator';
         setIsAdmin(isAdminUser || false);
@@ -89,92 +90,94 @@ export const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Hesap</Text>
-        
-        <TouchableOpacity style={styles.settingItem} onPress={handleBlockedUsers}>
-          <View style={styles.settingLeft}>
-            <Icon name="ban" size={24} color="#FF1744" />
-            <Text style={styles.settingText}>Engellenen Kullanıcılar</Text>
-          </View>
-          <Icon name="chevron-forward-outline" size={22} color="#757575" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingItem} onPress={handlePrivacy}>
-          <View style={styles.settingLeft}>
-            <Icon name="lock-closed" size={24} color="#424242" />
-            <Text style={styles.settingText}>Gizlilik</Text>
-          </View>
-          <Icon name="chevron-forward-outline" size={22} color="#757575" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingItem} onPress={handleSecurity}>
-          <View style={styles.settingLeft}>
-            <Icon name="shield-checkmark" size={24} color="#4CAF50" />
-            <Text style={styles.settingText}>Güvenlik</Text>
-          </View>
-          <Icon name="chevron-forward-outline" size={22} color="#757575" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingItem} onPress={handleAccountSettings}>
-          <View style={styles.settingLeft}>
-            <Icon name="person-circle" size={26} color="#424242" />
-            <Text style={styles.settingText}>Hesap Ayarları</Text>
-          </View>
-          <Icon name="chevron-forward-outline" size={22} color="#757575" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Bildirimler</Text>
-        
-        <View style={styles.settingItem}>
-          <View style={styles.settingLeft}>
-            <Icon name="notifications-circle-outline" size={26} color="#424242" />
-            <Text style={styles.settingText}>Bildirimleri Aç</Text>
-          </View>
-          <Switch
-            value={notificationsEnabled}
-            onValueChange={setNotificationsEnabled}
-            trackColor={{ false: '#dbdbdb', true: '#0095f6' }}
-            thumbColor="#fff"
-          />
-        </View>
-      </View>
-
-      {isAdmin && (
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Admin</Text>
-          
-          <TouchableOpacity style={styles.settingItem} onPress={handleAdminPanel}>
+          <Text style={styles.sectionTitle}>Hesap</Text>
+
+          <TouchableOpacity style={styles.settingItem} onPress={handleBlockedUsers}>
             <View style={styles.settingLeft}>
-              <Icon name="shield" size={24} color="#9C27B0" />
-              <Text style={[styles.settingText, styles.adminText]}>Admin Paneli</Text>
+              <Icon name="ban" size={24} color="#FF1744" />
+              <Text style={styles.settingText}>Engellenen Kullanıcılar</Text>
+            </View>
+            <Icon name="chevron-forward-outline" size={22} color="#757575" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem} onPress={handlePrivacy}>
+            <View style={styles.settingLeft}>
+              <Icon name="lock-closed" size={24} color="#424242" />
+              <Text style={styles.settingText}>Gizlilik</Text>
+            </View>
+            <Icon name="chevron-forward-outline" size={22} color="#757575" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem} onPress={handleSecurity}>
+            <View style={styles.settingLeft}>
+              <Icon name="shield-checkmark" size={24} color="#4CAF50" />
+              <Text style={styles.settingText}>Güvenlik</Text>
+            </View>
+            <Icon name="chevron-forward-outline" size={22} color="#757575" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem} onPress={handleAccountSettings}>
+            <View style={styles.settingLeft}>
+              <Icon name="person-circle" size={26} color="#424242" />
+              <Text style={styles.settingText}>Hesap Ayarları</Text>
             </View>
             <Icon name="chevron-forward-outline" size={22} color="#757575" />
           </TouchableOpacity>
         </View>
-      )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Diğer</Text>
-        
-        <TouchableOpacity style={styles.settingItem} onPress={handleAbout}>
-          <View style={styles.settingLeft}>
-            <Icon name="information-circle" size={26} color="#424242" />
-            <Text style={styles.settingText}>Hakkında</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Bildirimler</Text>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingLeft}>
+              <Icon name="notifications-circle-outline" size={26} color="#424242" />
+              <Text style={styles.settingText}>Bildirimleri Aç</Text>
+            </View>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={setNotificationsEnabled}
+              trackColor={{ false: '#dbdbdb', true: '#0095f6' }}
+              thumbColor="#fff"
+            />
           </View>
-          <Icon name="chevron-forward-outline" size={22} color="#757575" />
-        </TouchableOpacity>
-      </View>
+        </View>
 
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Çıkış Yap</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        {isAdmin && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Admin</Text>
+
+            <TouchableOpacity style={styles.settingItem} onPress={handleAdminPanel}>
+              <View style={styles.settingLeft}>
+                <Icon name="shield" size={24} color="#9C27B0" />
+                <Text style={[styles.settingText, styles.adminText]}>Admin Paneli</Text>
+              </View>
+              <Icon name="chevron-forward-outline" size={22} color="#757575" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Diğer</Text>
+
+          <TouchableOpacity style={styles.settingItem} onPress={handleAbout}>
+            <View style={styles.settingLeft}>
+              <Icon name="information-circle" size={26} color="#424242" />
+              <Text style={styles.settingText}>Hakkında</Text>
+            </View>
+            <Icon name="chevron-forward-outline" size={22} color="#757575" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutText}>Çıkış Yap</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 

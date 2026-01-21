@@ -27,17 +27,17 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     // Tam URL'i oluştur
     const fullUrl = `${config.baseURL}${config.url}`;
-    
+
     // Request log
     console.log('📤 REQUEST:', {
       Method: config.method?.toUpperCase(),
       URL: fullUrl,
       Data: config.data || null,
     });
-    
+
     return config;
   },
   (error) => {
@@ -61,14 +61,14 @@ const processQueue = (error: any, token: string | null = null) => {
       prom.resolve(token);
     }
   });
-  
+
   failedQueue = [];
 };
 
 api.interceptors.response.use(
   (response) => {
     const fullUrl = `${response.config.baseURL}${response.config.url}`;
-    
+
     // Response log
     console.log('✅ RESPONSE:', {
       Method: response.config.method?.toUpperCase(),
@@ -76,7 +76,7 @@ api.interceptors.response.use(
       Status: response.status,
       Data: response.data,
     });
-    
+
     return response;
   },
   async (error: any) => {
@@ -86,7 +86,7 @@ api.interceptors.response.use(
       // Sunucudan hata yanıtı geldi
       const fullUrl = `${error.config?.baseURL}${error.config?.url}`;
       const status = error.response.status;
-      
+
       console.error('❌ RESPONSE ERROR:', {
         Method: error.config?.method?.toUpperCase(),
         URL: fullUrl,
@@ -124,7 +124,7 @@ api.interceptors.response.use(
         try {
           console.log('🔄 Access token yenileniyor...');
           const refreshed = await authService.refreshToken();
-          
+
           if (refreshed) {
             const newToken = Storage.getString('token');
             processQueue(null, newToken);

@@ -44,7 +44,7 @@ let PostsService = class PostsService {
         }
         const post = await this.postModel.create({
             userId,
-            image: image || '',
+            image: image || undefined,
             video: video || undefined,
             caption,
             isPrivate: isPrivate || false,

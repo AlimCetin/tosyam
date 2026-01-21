@@ -5,12 +5,14 @@ import { Platform } from 'react-native';
 // Development modunu kontrol et
 // NOT: Production build'lerde sadece release build'lerde production URL kullanılır
 // Development için her zaman localhost kullan
-const USE_PRODUCTION_API = false; // Development için false, production build için true yapın
+//const USE_PRODUCTION_API = true; // Development için false, production build için true yapın
+const USE_PRODUCTION_API = true;
 
 const getBaseUrl = () => {
   // Production API kullanılacaksa
   if (USE_PRODUCTION_API) {
-    const url = 'https://api.tosyam.com/api';
+    const url = 'https://oxygen-caribbean-gravity-liberal.trycloudflare.com/api';
+    // const url= 'https://api.tosyam.com/api'
     console.log('🔧 Using PRODUCTION API URL:', url);
     return url;
   }
@@ -22,7 +24,7 @@ const getBaseUrl = () => {
     console.log('🔧 Using Android emulator API URL:', url);
     return url;
   }
-  
+
   // iOS simülatör ve gerçek cihazlar için localhost
   const url = 'http://localhost:3000/api';
   console.log('🔧 Using localhost API URL:', url);
@@ -31,9 +33,10 @@ const getBaseUrl = () => {
 
 const getSocketUrl = () => {
   if (USE_PRODUCTION_API) {
-    return 'https://api.tosyam.com';
+    // return'https://api.tosyam.com'
+    return 'https://oxygen-caribbean-gravity-liberal.trycloudflare.com';
   }
-  
+
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:3000';
   }

@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, BadRequestException, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, BadRequestException, ParseIntPipe, DefaultValuePipe, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { PostsService } from './posts.service';
 import { JwtAuthGuard } from '../guards/jwt.guard';
 import { NotBlockedGuard } from '../common/guards/not-blocked.guard';
@@ -8,21 +9,59 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { AddCommentDto } from './dto/add-comment.dto';
 import { UpdateVisibilityDto } from './dto/update-visibility.dto';
 import { Types } from 'mongoose';
+import { multerConfig } from '../config/multer.config';
 
 @Controller('posts')
 @UseGuards(JwtAuthGuard)
 export class PostsController {
-  constructor(private postsService: PostsService) {}
+  constructor(private postsService: PostsService) { }
+
+  @Post('upload-media')
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  async uploadMedia(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('File is not provided or invalid type');
+    }
+    // Windows path separatorlerini (\\) forward slash (/) ile değiştir
+    const normalizedPath = file.path.replace(/\\/g, '/');
+    // '1_backend/' prefixini kaldır (eğer varsa) ve root relative path dön
+    // file.path genellikle 'uploads/videos/xyz.mp4' veya '1_backend/uploads/...' döner
+    // Biz client'a '/uploads/videos/xyz.mp4' formatında dönmeliyiz
+
+    // Eğer path 'uploads' ile başlamıyorsa düzelt
+    const relativePath = normalizedPath.includes('uploads/')
+      ? normalizedPath.substring(normalizedPath.indexOf('uploads/'))
+      : normalizedPath;
+
+    return { url: `/${relativePath}` };
+  }
 
   @Post()
-  async create(@Body() body: CreatePostDto, @CurrentUser() user: User) {
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  async create(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: CreatePostDto,
+    @CurrentUser() user: User
+  ) {
+    let videoUrl = (body as any).video;
+
+    // Eğer dosya yüklendiyse, URL oluştur
+    if (file) {
+      // Windows path separatorlerini (\\) forward slash (/) ile değiştir
+      const normalizedPath = file.path.replace(/\\/g, '/');
+      const relativePath = normalizedPath.includes('uploads/')
+        ? normalizedPath.substring(normalizedPath.indexOf('uploads/'))
+        : normalizedPath;
+      videoUrl = `/${relativePath}`;
+    }
+
     return this.postsService.create(
-      user._id.toString(), 
-      body.image, 
+      user._id.toString(),
+      body.image,
       body.caption || '',
-      body.isPrivate || false,
-      body.hiddenFromFollowers || [],
-      (body as any).video
+      (body.isPrivate as any) === 'true' || body.isPrivate === true || false, // FormData string olarak gelebilir
+      body.hiddenFromFollowers || [], // TODO: JSON parse gerekebilir string gelirse
+      videoUrl
     );
   }
 

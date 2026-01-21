@@ -84,5 +84,4 @@ exports.UserCredentialsSchema.pre('save', async function () {
         return;
     this.password = await bcrypt.hash(this.password, 12);
 });
-exports.UserCredentialsSchema.index({ userId: 1 });
 //# sourceMappingURL=user-credentials.entity.js.map

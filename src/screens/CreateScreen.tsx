@@ -9,6 +9,10 @@ import {
   Alert,
   Switch,
   ScrollView,
+  Platform,
+  ActionSheetIOS,
+  SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import ImagePicker from 'react-native-image-crop-picker';
@@ -25,7 +29,9 @@ export const CreateScreen: React.FC = () => {
   const [caption, setCaption] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [hiddenFromFollowers, setHiddenFromFollowers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
+  // Ekrana blur olduğunda (kullanıcı başka ekrana geçtiğinde) form verilerini temizle
   useFocusEffect(
     React.useCallback(() => {
       if (route?.params?.hiddenFromFollowers) {
@@ -33,22 +39,97 @@ export const CreateScreen: React.FC = () => {
         // Clear params after reading to avoid stale data
         navigation.setParams({ hiddenFromFollowers: undefined });
       }
+
+      // Cleanup function: ekrandan ayrılırken form verilerini temizle
+      return () => {
+        setImage(null);
+        setVideo(null);
+        setCaption('');
+        setIsPrivate(false);
+        setHiddenFromFollowers([]);
+      };
     }, [route?.params?.hiddenFromFollowers, navigation])
   );
 
-  const pickImage = () => {
+  const showImagePickerOptions = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['İptal', 'Kameradan Çek', 'Galeriden Seç'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            pickImageFromCamera();
+          } else if (buttonIndex === 2) {
+            pickImageFromGallery();
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        'Fotoğraf Seç',
+        'Fotoğrafı nereden seçmek istersiniz?',
+        [
+          { text: 'İptal', style: 'cancel' },
+          { text: 'Kameradan Çek', onPress: pickImageFromCamera },
+          { text: 'Galeriden Seç', onPress: pickImageFromGallery },
+        ]
+      );
+    }
+  };
+
+  const pickImageFromCamera = () => {
+    setVideo(null);
+    ImagePicker.openCamera({
+      width: 1000,
+      height: 1000,
+      cropping: true,
+      compressImageQuality: 0.8,
+      includeBase64: true,
+      cropperStatusBarColor: '#000000',
+      cropperToolbarColor: '#000000',
+      cropperToolbarWidgetColor: '#ffffff',
+      cropperToolbarTitle: 'Resmi Düzenle',
+      enableRotationGesture: true,
+      freeStyleCropEnabled: false,
+      hideBottomControls: false,
+    })
+      .then((image) => {
+        const img = image as any;
+        if (img.data) {
+          const base64Image = `data:${img.mime};base64,${img.data}`;
+          setImage(base64Image);
+        }
+      })
+      .catch((error) => {
+        if (error.message !== 'User cancelled image selection' && error.message !== 'User cancelled') {
+          console.error('Kamera hatası:', error);
+          Alert.alert('Hata', 'Resim çekilemedi');
+        }
+      });
+  };
+
+  const pickImageFromGallery = () => {
     setVideo(null);
     ImagePicker.openPicker({
       width: 1000,
       height: 1000,
       cropping: true,
       compressImageQuality: 0.8,
-      includeBase64: true, // Base64 formatında al
+      includeBase64: true,
+      cropperStatusBarColor: '#000000',
+      cropperToolbarColor: '#000000',
+      cropperToolbarWidgetColor: '#ffffff',
+      cropperToolbarTitle: 'Resmi Düzenle',
+      enableRotationGesture: true,
+      freeStyleCropEnabled: false,
+      hideBottomControls: false,
     })
       .then((image) => {
-        if (image.data) {
-          // Base64 string olarak kaydet (data:image/jpeg;base64,... formatında)
-          const base64Image = `data:${image.mime};base64,${image.data}`;
+        const img = image as any;
+        if (img.data) {
+          const base64Image = `data:${img.mime};base64,${img.data}`;
           setImage(base64Image);
         }
       })
@@ -60,24 +141,73 @@ export const CreateScreen: React.FC = () => {
       });
   };
 
-  const pickVideo = () => {
+  const pickImage = () => {
+    showImagePickerOptions();
+  };
+
+  const pickVideoFromCamera = () => {
     setImage(null);
-    launchImageLibrary({ 
-      mediaType: 'video', 
-      videoQuality: 'high', 
-      selectionLimit: 1,
-      includeBase64: true, // Base64 formatında al
-    }, (response) => {
-      const asset = response.assets && response.assets[0];
-      if (asset?.base64) {
-        // Base64 string olarak kaydet
-        const base64Video = `data:video/mp4;base64,${asset.base64}`;
-        setVideo(base64Video);
-      } else if (asset?.uri) {
-        // Fallback: URI kullan
-        setVideo(asset.uri);
-      }
-    });
+    ImagePicker.openCamera({
+      mediaType: 'video',
+      videoQuality: 'high',
+    })
+      .then((video) => {
+        if (video.path) {
+          setVideo(video.path);
+        }
+      })
+      .catch((error) => {
+        if (error.message !== 'User cancelled image selection' && error.message !== 'User cancelled') {
+          console.error('Kamera video hatası:', error);
+          Alert.alert('Hata', 'Video çekilemedi');
+        }
+      });
+  };
+
+  const pickVideoFromGallery = () => {
+    setImage(null);
+    ImagePicker.openPicker({
+      mediaType: 'video',
+    })
+      .then((video) => {
+        if (video.path) {
+          setVideo(video.path);
+        }
+      })
+      .catch((error) => {
+        if (error.message !== 'User cancelled image selection') {
+          console.error('Video seçme hatası:', error);
+          Alert.alert('Hata', 'Video seçilemedi');
+        }
+      });
+  };
+
+  const pickVideo = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['İptal', 'Kameradan Çek', 'Galeriden Seç'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            pickVideoFromCamera();
+          } else if (buttonIndex === 2) {
+            pickVideoFromGallery();
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        'Video Seç',
+        'Videoyu nereden seçmek istersiniz?',
+        [
+          { text: 'İptal', style: 'cancel' },
+          { text: 'Kameradan Çek', onPress: pickVideoFromCamera },
+          { text: 'Galeriden Seç', onPress: pickVideoFromGallery },
+        ]
+      );
+    }
   };
 
   const handlePost = async () => {
@@ -87,24 +217,40 @@ export const CreateScreen: React.FC = () => {
     }
 
     try {
+      setLoading(true);
       await postService.createPost(image || undefined, caption, isPrivate, hiddenFromFollowers, video || undefined);
+
+      // Post başarıyla paylaşıldıktan sonra state'leri temizle
+      setImage(null);
+      setVideo(null);
+      setCaption('');
+      setIsPrivate(false);
+      setHiddenFromFollowers([]);
+
       Alert.alert('Başarılı', 'Gönderi paylaşıldı', [
         { text: 'Tamam', onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
+      console.error('Gönderi paylaşma hatası:', error);
       Alert.alert('Hata', 'Gönderi paylaşılamadı');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.cancel}>İptal</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Yeni Gönderi</Text>
-        <TouchableOpacity onPress={handlePost}>
-          <Text style={styles.share}>Paylaş</Text>
+        <TouchableOpacity onPress={handlePost} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator size="small" color="#0095f6" />
+          ) : (
+            <Text style={styles.share}>Paylaş</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -116,7 +262,7 @@ export const CreateScreen: React.FC = () => {
             ) : (
               <Video source={{ uri: video! }} style={styles.preview} resizeMode="contain" controls />
             )}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.changeMediaButton}
               onPress={() => {
                 setImage(null);
@@ -176,7 +322,7 @@ export const CreateScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.manageButton}
               onPress={() => {
-                navigation.navigate('SelectHiddenFollowers', { 
+                navigation.navigate('SelectHiddenFollowers', {
                   initialHidden: hiddenFromFollowers,
                 });
               }}>
@@ -189,7 +335,7 @@ export const CreateScreen: React.FC = () => {
           )}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

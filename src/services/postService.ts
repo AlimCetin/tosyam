@@ -25,14 +25,45 @@ export const postService = {
   },
 
   createPost: async (image?: string, caption?: string, isPrivate?: boolean, hiddenFromFollowers?: string[], video?: string) => {
-    const { data } = await api.post('/posts', { 
-      image, 
-      video,
-      caption,
-      isPrivate: isPrivate || false,
-      hiddenFromFollowers: hiddenFromFollowers || [],
-    });
-    return data;
+    // Video yerel dosya ise (http/data değilse) Multipart request gönder
+    if (video && !video.startsWith('http') && !video.startsWith('data:')) {
+      const formData = new FormData();
+
+      if (image) formData.append('image', image);
+      if (caption) formData.append('caption', caption);
+      formData.append('isPrivate', String(isPrivate || false));
+
+      // hiddenFromFollowers array olduğu için stringify etmemiz gerekebilir
+      // veya her bir item için append yapabiliriz. Backend'e bağlı.
+      // Şimdilik stringify edip gönderiyoruz (Backend'de parse edilecek veya array olarak handle edilecek)
+      // Ancak basitlik için loop ile ekleyelim:
+      if (hiddenFromFollowers && hiddenFromFollowers.length > 0) {
+        hiddenFromFollowers.forEach((id) => formData.append('hiddenFromFollowers[]', id));
+      }
+
+      formData.append('file', {
+        uri: video,
+        type: 'video/mp4',
+        name: 'video.mp4',
+      });
+
+      const { data } = await api.post('/posts', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return data;
+    }
+
+    // Normal JSON request (Eski yöntem - video yoksa veya remote URL ise)
+    else {
+      const { data } = await api.post('/posts', {
+        image,
+        video,
+        caption,
+        isPrivate: isPrivate || false,
+        hiddenFromFollowers: hiddenFromFollowers || [],
+      });
+      return data;
+    }
   },
 
   likePost: async (postId: string) => {
@@ -107,6 +138,12 @@ export const postService = {
 
   updateVisibility: async (postId: string, payload: { isPrivate?: boolean; isHidden?: boolean; hiddenFromFollowers?: string[] }) => {
     const { data } = await api.put(`/posts/${postId}/visibility`, payload);
+    return data;
+  },
+  uploadMedia: async (formData: FormData) => {
+    const { data } = await api.post('/posts/upload-media', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return data;
   },
 };

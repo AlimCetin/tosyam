@@ -72,6 +72,7 @@ export interface Message {
 
 export interface Conversation {
   id: string;
+  _id?: string; // Backend'den gelebilir
   participants: User[];
   lastMessage?: Message;
   unreadCount: number;
@@ -121,7 +122,6 @@ export interface Report {
     text?: string;
     content?: string;
     postId?: string;
-    userId?: string;
     senderId?: string;
     conversationId?: string;
   };

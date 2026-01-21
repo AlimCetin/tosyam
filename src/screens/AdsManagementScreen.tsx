@@ -63,7 +63,7 @@ export const AdsManagementScreen: React.FC = () => {
       }
       const role = currentUser?.role || 'user';
       setUserRole(role);
-      
+
       // Sadece admin ve super_admin erişebilir
       if (role !== 'admin' && role !== 'super_admin') {
         setHasAccess(false);
@@ -79,7 +79,7 @@ export const AdsManagementScreen: React.FC = () => {
         );
         return;
       }
-      
+
       // Erişim varsa reklamları yükle
       setHasAccess(true);
       loadAds();
@@ -160,6 +160,13 @@ export const AdsManagementScreen: React.FC = () => {
       height: 1000,
       cropping: true,
       compressImageQuality: 0.8,
+      cropperStatusBarColor: '#000000',
+      cropperToolbarColor: '#000000',
+      cropperToolbarWidgetColor: '#ffffff',
+      cropperToolbarTitle: 'Resmi Düzenle',
+      enableRotationGesture: true,
+      freeStyleCropEnabled: false,
+      hideBottomControls: false,
     })
       .then((image) => {
         if (image.path) {
@@ -167,7 +174,7 @@ export const AdsManagementScreen: React.FC = () => {
           setAdType('image');
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   const pickVideo = () => {
@@ -264,12 +271,12 @@ export const AdsManagementScreen: React.FC = () => {
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
           <Text style={styles.statusText}>
             {item.status === 'active' ? 'Aktif' :
-             item.status === 'paused' ? 'Duraklatıldı' :
-             item.status === 'expired' ? 'Süresi Doldu' : 'Taslak'}
+              item.status === 'paused' ? 'Duraklatıldı' :
+                item.status === 'expired' ? 'Süresi Doldu' : 'Taslak'}
           </Text>
         </View>
       </View>
-      
+
       {item.mediaUrl && (
         <Image source={{ uri: item.mediaUrl }} style={styles.adImage} />
       )}
@@ -371,7 +378,7 @@ export const AdsManagementScreen: React.FC = () => {
                 value={title}
                 onChangeText={setTitle}
               />
-              
+
               <TextInput
                 style={styles.input}
                 placeholder="Açıklama"
