@@ -6,12 +6,12 @@ import { Platform } from 'react-native';
 // NOT: Production build'lerde sadece release build'lerde production URL kullanılır
 // Development için her zaman localhost kullan
 //const USE_PRODUCTION_API = true; // Development için false, production build için true yapın
-const USE_PRODUCTION_API = true;
+const USE_PRODUCTION_API = false;
 
 const getBaseUrl = () => {
   // Production API kullanılacaksa
   if (USE_PRODUCTION_API) {
-    const url = 'https://oxygen-caribbean-gravity-liberal.trycloudflare.com/api';
+    const url = 'https://simpsons-variables-salary-starts.trycloudflare.com/api';
     // const url= 'https://api.tosyam.com/api'
     console.log('🔧 Using PRODUCTION API URL:', url);
     return url;
@@ -34,7 +34,7 @@ const getBaseUrl = () => {
 const getSocketUrl = () => {
   if (USE_PRODUCTION_API) {
     // return'https://api.tosyam.com'
-    return 'https://oxygen-caribbean-gravity-liberal.trycloudflare.com';
+    return 'https://simpsons-variables-salary-starts.trycloudflare.com';
   }
 
   if (Platform.OS === 'android') {

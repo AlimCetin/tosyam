@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+
 import {
   View,
   FlatList,
@@ -28,6 +29,8 @@ export const ChatScreen: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationId || null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const socketRef = useRef<any>(null);
   const flatListRef = useRef<FlatList>(null);
   const currentUserRef = useRef<any>(null);
@@ -53,27 +56,36 @@ export const ChatScreen: React.FC = () => {
     };
   }, [conversationId, receiverId]);
 
-  // Klavye yüksekliğini dinle (Android için)
+  // Klavye yüksekliğini dinle
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
+    const showSub = Keyboard.addListener(
       Platform.OS === 'android' ? 'keyboardDidShow' : 'keyboardWillShow',
       (e) => {
+        const h = e?.endCoordinates?.height ?? 0;
+        if (Platform.OS === 'android') {
+          setKeyboardHeight(h);
+          setIsKeyboardVisible(true);
+        }
+
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: true });
-        }, 200);
+        }, 150);
       }
     );
 
-    const keyboardDidHideListener = Keyboard.addListener(
+    const hideSub = Keyboard.addListener(
       Platform.OS === 'android' ? 'keyboardDidHide' : 'keyboardWillHide',
       () => {
-        // No-op
+        if (Platform.OS === 'android') {
+          setKeyboardHeight(0);
+          setIsKeyboardVisible(false);
+        }
       }
     );
 
     return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
+      showSub.remove();
+      hideSub.remove();
     };
   }, []);
 
@@ -259,14 +271,22 @@ export const ChatScreen: React.FC = () => {
   // Input container yüksekliği (gerçek yükseklik)
   const inputContainerHeight = Platform.OS === 'ios' ? 64 : 68;
 
+
+  const safeEdges =
+    Platform.OS === 'ios'
+      ? (['top', 'bottom'] as const)
+      : (isKeyboardVisible ? (['top'] as const) : (['top', 'bottom'] as const));
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={safeEdges}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={headerHeight}
-        enabled={true}>
-        <View style={styles.container}>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+        enabled={Platform.OS === 'ios'}
+      >
+        {/* Android'de prediction bar dahil klavye yüksekliği kadar alt padding */}
+        <View style={[styles.container, Platform.OS === 'android' && { paddingBottom: keyboardHeight }]}>
           <FlatList
             ref={flatListRef}
             data={messages}
@@ -274,22 +294,20 @@ export const ChatScreen: React.FC = () => {
             renderItem={renderMessage}
             contentContainerStyle={[
               styles.messagesList,
-              {
-                paddingBottom: inputContainerHeight + 8
-              }
+              { paddingBottom: inputContainerHeight + 10 }
             ]}
             onContentSizeChange={() => {
               if (messages.length > 0) {
                 setTimeout(() => {
                   flatListRef.current?.scrollToEnd({ animated: false });
-                }, 100);
+                }, 80);
               }
             }}
             keyboardShouldPersistTaps="handled"
             style={styles.flatList}
-            inverted={false}
             showsVerticalScrollIndicator={false}
           />
+
           <View style={styles.inputContainer}>
             <View style={styles.inputWrapper}>
               <TextInput
@@ -302,13 +320,14 @@ export const ChatScreen: React.FC = () => {
                 onFocus={() => {
                   setTimeout(() => {
                     flatListRef.current?.scrollToEnd({ animated: true });
-                  }, 200);
+                  }, 150);
                 }}
               />
               <TouchableOpacity
                 onPress={sendMessage}
                 style={[styles.sendButton, !text.trim() && styles.sendButtonDisabled]}
-                disabled={!text.trim()}>
+                disabled={!text.trim()}
+              >
                 <Icon
                   name={text.trim() ? "send" : "send-outline"}
                   size={24}
@@ -326,8 +345,8 @@ export const ChatScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#ece5dd',
-    marginBottom: 0
+    backgroundColor: '#ece5dd'
+
   },
   container: {
     flex: 1,
@@ -339,7 +358,6 @@ const styles = StyleSheet.create({
   messagesList: {
     paddingHorizontal: 8,
     paddingTop: 8,
-    flexGrow: 1,
   },
   messageContainer: {
     flexDirection: 'row',
