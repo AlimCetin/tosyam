@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -18,6 +18,16 @@ export const SearchScreen: React.FC = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    // Navigasyon animasyonu biterken veya hemen sonra odaklanması için kısa bir gecikme
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const searchUsers = async (text: string) => {
     setQuery(text);
@@ -46,6 +56,7 @@ export const SearchScreen: React.FC = () => {
       <View style={styles.searchBar}>
         <Icon name="search-circle" size={24} color="#757575" />
         <TextInput
+          ref={inputRef}
           style={styles.input}
           placeholder="Ara"
           value={query}
