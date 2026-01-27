@@ -12,6 +12,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ReportsModule } from './reports/reports.module';
 import { AdminModule } from './admin/admin.module';
 import { AdsModule } from './ads/ads.module';
+import { ConfessionsModule } from './confessions/confessions.module';
 import { AppController } from './app.controller';
 import { AppLoggerService } from './common/logger/logger.service';
 import { RedisModule } from './common/redis/redis.module';
@@ -24,9 +25,9 @@ import { HealthModule } from './health/health.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        throttlers:[{
-        ttl: configService.get<number>('THROTTLE_TTL', 60),
-        limit: configService.get<number>('THROTTLE_LIMIT', 100),  
+        throttlers: [{
+          ttl: configService.get<number>('THROTTLE_TTL', 60),
+          limit: configService.get<number>('THROTTLE_LIMIT', 100),
         }],
       }),
     }),
@@ -41,6 +42,7 @@ import { HealthModule } from './health/health.module';
     ReportsModule,
     AdminModule,
     AdsModule,
+    ConfessionsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -52,4 +54,4 @@ import { HealthModule } from './health/health.module';
   ],
   exports: [AppLoggerService],
 })
-export class AppModule {}
+export class AppModule { }

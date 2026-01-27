@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useToast } from '../context/ToastContext';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import { PostCard } from '../components/PostCard';
@@ -20,6 +21,7 @@ import { Post, User } from '../types';
 
 export const SavedPostsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +41,7 @@ export const SavedPostsScreen: React.FC = () => {
       setPosts(postsData || []);
     } catch (error) {
       console.error('❌ Kaydedilen postlar yüklenemedi:', error);
-      Alert.alert('Hata', 'Kaydedilen postlar yüklenemedi');
+      showToast('Kaydedilen postlar yüklenemedi', 'error');
     } finally {
       setLoading(false);
     }
@@ -61,10 +63,10 @@ export const SavedPostsScreen: React.FC = () => {
       posts.map((p) =>
         p.id === postId
           ? {
-              ...p,
-              isLiked: !wasLiked,
-              likeCount: wasLiked ? (p.likeCount || 0) - 1 : (p.likeCount || 0) + 1,
-            }
+            ...p,
+            isLiked: !wasLiked,
+            likeCount: wasLiked ? (p.likeCount || 0) - 1 : (p.likeCount || 0) + 1,
+          }
           : p
       )
     );
@@ -82,16 +84,16 @@ export const SavedPostsScreen: React.FC = () => {
     } catch (error: any) {
       console.error('❌ Beğeni hatası:', error);
       console.error('❌ Hata detayı:', error.response?.data || error.message);
-      
+
       // Hata durumunda geri al
       setPosts(
         posts.map((p) =>
           p.id === postId
             ? {
-                ...p,
-                isLiked: wasLiked,
-                likeCount: wasLiked ? (p.likeCount || 0) + 1 : (p.likeCount || 0) - 1,
-              }
+              ...p,
+              isLiked: wasLiked,
+              likeCount: wasLiked ? (p.likeCount || 0) + 1 : (p.likeCount || 0) - 1,
+            }
             : p
         )
       );
@@ -129,7 +131,7 @@ export const SavedPostsScreen: React.FC = () => {
     } catch (error: any) {
       console.error('❌ Kaydet hatası:', error);
       console.error('❌ Hata detayı:', error.response?.data || error.message);
-      
+
       // Hata durumunda geri al
       if (wasSaved) {
         loadSavedPosts();
@@ -147,7 +149,7 @@ export const SavedPostsScreen: React.FC = () => {
 
     try {
       const username = post.user?.username || post.user?.fullName || 'Kullanıcı';
-      const shareMessage = post.caption 
+      const shareMessage = post.caption
         ? `${username} bir gönderi paylaştı: ${post.caption}`
         : `${username} bir gönderi paylaştı`;
 
@@ -155,40 +157,40 @@ export const SavedPostsScreen: React.FC = () => {
         const mediaData = post.image || post.video;
         let filePath = '';
         let shouldCleanup = false;
-        
+
         if (mediaData && mediaData.startsWith('data:')) {
           const base64Data = mediaData.split(',')[1];
           const mimeType = mediaData.split(';')[0].split(':')[1];
           const extension = mimeType.split('/')[1];
-          
+
           const fileName = `share_${Date.now()}.${extension}`;
           filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
-          
+
           await RNFS.writeFile(filePath, base64Data, 'base64');
           shouldCleanup = true;
-          
+
           console.log('✅ Base64 dosyaya yazıldı:', filePath);
         } else if (mediaData && (mediaData.startsWith('http://') || mediaData.startsWith('https://'))) {
           const extension = mediaData.includes('.mp4') || post.video ? 'mp4' : 'jpg';
           const fileName = `share_${Date.now()}.${extension}`;
           filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
-          
+
           console.log('📥 URL indiriliyor:', mediaData);
           const downloadResult = await RNFS.downloadFile({
             fromUrl: mediaData,
             toFile: filePath,
           }).promise;
-          
+
           if (downloadResult.statusCode !== 200) {
             throw new Error('Görsel indirilemedi');
           }
-          
+
           shouldCleanup = true;
           console.log('✅ URL indirildi:', filePath);
         } else {
           filePath = mediaData || '';
         }
-        
+
         const shareOptions: any = {
           title: 'Paylaş',
           message: shareMessage,
@@ -199,7 +201,7 @@ export const SavedPostsScreen: React.FC = () => {
 
         await Share.open(shareOptions);
         console.log('✅ Gönderi paylaşıldı');
-        
+
         if (shouldCleanup) {
           setTimeout(async () => {
             try {
@@ -213,7 +215,7 @@ export const SavedPostsScreen: React.FC = () => {
             }
           }, 2000);
         }
-        
+
       } else {
         await Share.open({
           title: 'Gönderiyi Paylaş',
@@ -228,7 +230,7 @@ export const SavedPostsScreen: React.FC = () => {
         return;
       }
       console.error('❌ Paylaşım hatası:', error);
-      Alert.alert('Hata', 'Gönderi paylaşılamadı');
+      showToast('Gönderi paylaşılamadı', 'error');
     }
   };
 

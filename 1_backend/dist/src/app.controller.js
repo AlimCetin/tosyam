@@ -20,6 +20,9 @@ let AppController = class AppController {
     health() {
         return { status: 'OK', message: 'Tosyam API is running' };
     }
+    root() {
+        return { message: 'Welcome to Tosyam API v' + this.LATEST_VERSION };
+    }
     versionCheck(currentVersion, platform) {
         const isUpdateRequired = this.isUpdateRequired(currentVersion || '0.0.0');
         const forceUpdate = this.isForceUpdate(currentVersion || '0.0.0');
@@ -82,6 +85,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AppController.prototype, "health", null);
+__decorate([
+    (0, common_1.Get)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], AppController.prototype, "root", null);
 __decorate([
     (0, common_1.Get)('app/version-check'),
     __param(0, (0, common_1.Query)('currentVersion')),

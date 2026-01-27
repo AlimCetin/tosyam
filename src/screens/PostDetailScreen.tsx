@@ -11,6 +11,8 @@ import {
 import Video from 'react-native-video';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useToast } from '../context/ToastContext';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { postService } from '../services/postService';
 import { authService } from '../services/authService';
 import { Post } from '../types';
@@ -31,10 +33,12 @@ const getVideoUrl = (url: string) => {
 
 export const PostDetailScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const route = useRoute<any>();
   const { postId } = route.params;
   const [post, setPost] = useState<Post | null>(null);
   const [isOwnPost, setIsOwnPost] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
   useEffect(() => {
     loadPost();
@@ -98,43 +102,33 @@ export const PostDetailScreen: React.FC = () => {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Gönderiyi Sil',
-      'Bu gönderiyi silmek istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await postService.deletePost(postId);
-              Alert.alert('Başarılı', 'Gönderi silindi', [
-                { text: 'Tamam', onPress: () => navigation.goBack() },
-              ]);
-            } catch (error) {
-              console.error('Gönderi silme hatası:', error);
-              Alert.alert('Hata', 'Gönderi silinemedi');
-            }
-          },
-        },
-      ]
-    );
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await postService.deletePost(postId);
+      showToast('Gönderi silindi', 'success');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Gönderi silme hatası:', error);
+      showToast('Gönderi silinemedi', 'error');
+    }
   };
 
   const handleHide = async () => {
     try {
       if (post?.isHidden) {
         await postService.updateVisibility(postId, { isHidden: false });
-        Alert.alert('Başarılı', 'Gönderi gösterildi');
+        showToast('Gönderi gösterildi', 'success');
       } else {
         await postService.updateVisibility(postId, { isHidden: true });
-        Alert.alert('Başarılı', 'Gönderi gizlendi');
+        showToast('Gönderi gizlendi', 'success');
       }
       loadPost();
     } catch (error) {
       console.error('Gönderi gizleme hatası:', error);
-      Alert.alert('Hata', 'Gönderi gizlenemedi');
+      showToast('Gönderi gizlenemedi', 'error');
     }
   };
 
@@ -337,6 +331,17 @@ export const PostDetailScreen: React.FC = () => {
           </View>
         </View>
       )}
+
+      <ConfirmationModal
+        isVisible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={confirmDelete}
+        title="Gönderiyi Sil"
+        message="Bu gönderiyi silmek istediğinize emin misiniz?"
+        confirmText="Sil"
+        isDestructive
+        icon="trash-outline"
+      />
     </ScrollView>
   );
 };

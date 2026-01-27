@@ -15,14 +15,17 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import ImagePicker from 'react-native-image-crop-picker';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { postService } from '../services/postService';
+import { MediaPickerModal } from '../components/MediaPickerModal';
 
 export const CreateScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const route = useRoute<any>();
   const [image, setImage] = useState<string | null>(null);
   const [video, setVideo] = useState<string | null>(null);
@@ -30,6 +33,8 @@ export const CreateScreen: React.FC = () => {
   const [isPrivate, setIsPrivate] = useState(false);
   const [hiddenFromFollowers, setHiddenFromFollowers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<'image' | 'video'>('image');
 
   // Ekrana blur olduğunda (kullanıcı başka ekrana geçtiğinde) form verilerini temizle
   useFocusEffect(
@@ -52,31 +57,8 @@ export const CreateScreen: React.FC = () => {
   );
 
   const showImagePickerOptions = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['İptal', 'Kameradan Çek', 'Galeriden Seç'],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            pickImageFromCamera();
-          } else if (buttonIndex === 2) {
-            pickImageFromGallery();
-          }
-        }
-      );
-    } else {
-      Alert.alert(
-        'Fotoğraf Seç',
-        'Fotoğrafı nereden seçmek istersiniz?',
-        [
-          { text: 'İptal', style: 'cancel' },
-          { text: 'Kameradan Çek', onPress: pickImageFromCamera },
-          { text: 'Galeriden Seç', onPress: pickImageFromGallery },
-        ]
-      );
-    }
+    setModalType('image');
+    setModalVisible(true);
   };
 
   const pickImageFromCamera = () => {
@@ -105,7 +87,7 @@ export const CreateScreen: React.FC = () => {
       .catch((error) => {
         if (error.message !== 'User cancelled image selection' && error.message !== 'User cancelled') {
           console.error('Kamera hatası:', error);
-          Alert.alert('Hata', 'Resim çekilemedi');
+          showToast('Resim çekilemedi', 'error');
         }
       });
   };
@@ -136,7 +118,7 @@ export const CreateScreen: React.FC = () => {
       .catch((error) => {
         if (error.message !== 'User cancelled image selection') {
           console.error('Resim seçme hatası:', error);
-          Alert.alert('Hata', 'Resim seçilemedi');
+          showToast('Resim seçilemedi', 'error');
         }
       });
   };
@@ -159,7 +141,7 @@ export const CreateScreen: React.FC = () => {
       .catch((error) => {
         if (error.message !== 'User cancelled image selection' && error.message !== 'User cancelled') {
           console.error('Kamera video hatası:', error);
-          Alert.alert('Hata', 'Video çekilemedi');
+          showToast('Video çekilemedi', 'error');
         }
       });
   };
@@ -177,42 +159,19 @@ export const CreateScreen: React.FC = () => {
       .catch((error) => {
         if (error.message !== 'User cancelled image selection') {
           console.error('Video seçme hatası:', error);
-          Alert.alert('Hata', 'Video seçilemedi');
+          showToast('Video seçilemedi', 'error');
         }
       });
   };
 
   const pickVideo = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['İptal', 'Kameradan Çek', 'Galeriden Seç'],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            pickVideoFromCamera();
-          } else if (buttonIndex === 2) {
-            pickVideoFromGallery();
-          }
-        }
-      );
-    } else {
-      Alert.alert(
-        'Video Seç',
-        'Videoyu nereden seçmek istersiniz?',
-        [
-          { text: 'İptal', style: 'cancel' },
-          { text: 'Kameradan Çek', onPress: pickVideoFromCamera },
-          { text: 'Galeriden Seç', onPress: pickVideoFromGallery },
-        ]
-      );
-    }
+    setModalType('video');
+    setModalVisible(true);
   };
 
   const handlePost = async () => {
     if (!image && !video) {
-      Alert.alert('Hata', 'Lütfen fotoğraf veya video seçin');
+      showToast('Lütfen fotoğraf veya video seçin', 'warning');
       return;
     }
 
@@ -227,12 +186,11 @@ export const CreateScreen: React.FC = () => {
       setIsPrivate(false);
       setHiddenFromFollowers([]);
 
-      Alert.alert('Başarılı', 'Gönderi paylaşıldı', [
-        { text: 'Tamam', onPress: () => navigation.goBack() },
-      ]);
+      showToast('Gönderi paylaşıldı', 'success');
+      navigation.goBack();
     } catch (error) {
       console.error('Gönderi paylaşma hatası:', error);
-      Alert.alert('Hata', 'Gönderi paylaşılamadı');
+      showToast('Gönderi paylaşılamadı', 'error');
     } finally {
       setLoading(false);
     }
@@ -335,6 +293,14 @@ export const CreateScreen: React.FC = () => {
           )}
         </View>
       </ScrollView>
+
+      <MediaPickerModal
+        isVisible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        title={modalType === 'image' ? 'Fotoğraf Seç' : 'Video Seç'}
+        onSelectCamera={modalType === 'image' ? pickImageFromCamera : pickVideoFromCamera}
+        onSelectGallery={modalType === 'image' ? pickImageFromGallery : pickVideoFromGallery}
+      />
     </SafeAreaView>
   );
 };

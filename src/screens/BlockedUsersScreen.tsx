@@ -10,14 +10,19 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { userService } from '../services/userService';
 import { User } from '../types';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 export const BlockedUsersScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [blockedUsers, setBlockedUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unblockModalVisible, setUnblockModalVisible] = useState(false);
+  const [unblockingUserId, setUnblockingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     loadBlockedUsers();
@@ -34,32 +39,26 @@ export const BlockedUsersScreen: React.FC = () => {
       setBlockedUsers(normalizedUsers);
     } catch (error) {
       console.error('Engellenen kullanıcılar yüklenemedi:', error);
-      Alert.alert('Hata', 'Engellenen kullanıcılar yüklenemedi');
+      showToast('Engellenen kullanıcılar yüklenemedi', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUnblock = async (userId: string) => {
-    Alert.alert(
-      'Engeli Kaldır',
-      'Bu kullanıcının engelini kaldırmak istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Engeli Kaldır',
-          onPress: async () => {
-            try {
-              await userService.unblockUser(userId);
-              setBlockedUsers(blockedUsers.filter((u) => u.id !== userId));
-              Alert.alert('Başarılı', 'Engel kaldırıldı');
-            } catch (error) {
-              Alert.alert('Hata', 'Engel kaldırılamadı');
-            }
-          },
-        },
-      ]
-    );
+  const handleUnblock = (userId: string) => {
+    setUnblockingUserId(userId);
+    setUnblockModalVisible(true);
+  };
+
+  const confirmUnblock = async () => {
+    if (!unblockingUserId) return;
+    try {
+      await userService.unblockUser(unblockingUserId);
+      setBlockedUsers(blockedUsers.filter((u) => u.id !== unblockingUserId));
+      showToast('Engel kaldırıldı', 'success');
+    } catch (error) {
+      showToast('Engel kaldırılamadı', 'error');
+    }
   };
 
   const handleUserPress = (userId: string) => {
@@ -110,6 +109,17 @@ export const BlockedUsersScreen: React.FC = () => {
             <Text style={styles.emptyText}>Engellenen kullanıcı yok</Text>
           </View>
         }
+      />
+
+      <ConfirmationModal
+        isVisible={unblockModalVisible}
+        onClose={() => setUnblockModalVisible(false)}
+        onConfirm={confirmUnblock}
+        title="Engeli Kaldır"
+        message="Bu kullanıcının engelini kaldırmak istediğinize emin misiniz?"
+        confirmText="Engeli Kaldır"
+        icon="unlock-outline"
+        iconColor="#4CAF50"
       />
     </View>
   );

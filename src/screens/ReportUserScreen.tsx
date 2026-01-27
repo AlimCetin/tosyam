@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import { reportService } from '../services/reportService';
 
 const REPORT_REASONS: { label: string; value: string }[] = [
@@ -23,6 +24,7 @@ const REPORT_REASONS: { label: string; value: string }[] = [
 
 export const ReportUserScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const route = useRoute<any>();
   const { userId } = route.params;
   const [selectedReason, setSelectedReason] = useState('');
@@ -31,18 +33,17 @@ export const ReportUserScreen: React.FC = () => {
 
   const handleReport = async () => {
     if (!selectedReason) {
-      Alert.alert('Hata', 'Lütfen bir sebep seçin');
+      showToast('Lütfen bir sebep seçin', 'warning');
       return;
     }
 
     try {
       setLoading(true);
       await reportService.createReport(userId, 'user', selectedReason, details);
-      Alert.alert('Başarılı', 'Şikayetiniz alındı', [
-        { text: 'Tamam', onPress: () => navigation.goBack() },
-      ]);
+      showToast('Şikayetiniz başarıyla iletildi', 'success');
+      navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Hata', error.response?.data?.message || 'Şikayet gönderilemedi');
+      showToast(error.response?.data?.message || 'Şikayet gönderilemedi', 'error');
     } finally {
       setLoading(false);
     }

@@ -9,20 +9,49 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { postService } from '../services/postService';
 import { Comment } from '../types';
 
 export const CommentsScreen: React.FC = () => {
   const route = useRoute<any>();
+  const headerHeight = useHeaderHeight();
   const { postId } = route.params;
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     loadComments();
   }, [postId]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'android' ? 'keyboardDidShow' : 'keyboardWillShow',
+      (e) => {
+        if (Platform.OS === 'android') {
+          setKeyboardHeight(e.endCoordinates.height);
+        }
+      }
+    );
+
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'android' ? 'keyboardDidHide' : 'keyboardWillHide',
+      () => {
+        if (Platform.OS === 'android') {
+          setKeyboardHeight(0);
+        }
+      }
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const loadComments = async () => {
     try {
@@ -38,9 +67,9 @@ export const CommentsScreen: React.FC = () => {
     if (!text.trim()) return;
 
     try {
-      const newComment = await postService.addComment(postId, text);
-      setComments([...comments, newComment]);
+      await postService.addComment(postId, text);
       setText('');
+      await loadComments(); // Sayfayı yenile ve doğru sırayı getir
     } catch (error) {
       console.error('Yorum eklenemedi:', error);
     }
@@ -49,48 +78,53 @@ export const CommentsScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <FlatList
-        data={comments}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => {
-          const user = item.user || { username: 'Unknown', avatar: null };
-          return (
-            <View style={styles.comment}>
-              <Image
-                source={{
-                  uri: user.avatar || 'https://via.placeholder.com/40',
-                }}
-                style={styles.avatar}
-              />
-              <View style={styles.commentContent}>
-                <Text style={styles.commentText}>
-                  <Text style={styles.username}>
-                    {user.username || user.fullName || 'Unknown'}{' '}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}>
+      <View style={[styles.innerContainer, Platform.OS === 'android' && { paddingBottom: keyboardHeight }]}>
+        <FlatList
+          data={comments}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            const user = item.user || { username: 'Unknown', avatar: null };
+            return (
+              <View style={styles.comment}>
+                <Image
+                  source={{
+                    uri: user.avatar || 'https://via.placeholder.com/40',
+                  }}
+                  style={styles.avatar}
+                />
+                <View style={styles.commentContent}>
+                  <Text style={styles.commentText}>
+                    <Text style={styles.username}>
+                      {user.username || user.fullName || 'Unknown'}{' '}
+                    </Text>
+                    {item.text}
                   </Text>
-                  {item.text}
-                </Text>
-                <Text style={styles.time}>{item.createdAt}</Text>
+                  <Text style={styles.time}>
+                    {new Date(item.createdAt).toLocaleDateString('tr-TR')} {new Date(item.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  </Text>
+                </View>
               </View>
-            </View>
-          );
-        }}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>Henüz yorum yok</Text>
-        }
-      />
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Yorum ekle..."
-          value={text}
-          onChangeText={setText}
-          multiline
+            );
+          }}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>Henüz yorum yok</Text>
+          }
         />
-        <TouchableOpacity onPress={handleAddComment}>
-          <Text style={styles.sendButton}>Gönder</Text>
-        </TouchableOpacity>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Yorum ekle..."
+            value={text}
+            onChangeText={setText}
+            multiline
+          />
+          <TouchableOpacity onPress={handleAddComment}>
+            <Text style={styles.sendButton}>Gönder</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -100,6 +134,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  innerContainer: {
+    flex: 1,
   },
   comment: {
     flexDirection: 'row',
@@ -126,6 +163,7 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 12,
     color: '#8e8e8e',
+    textAlign: 'right',
   },
   inputContainer: {
     flexDirection: 'row',

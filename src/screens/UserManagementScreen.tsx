@@ -14,13 +14,16 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useToast } from '../context/ToastContext';
 import { adminService } from '../services/adminService';
 import { User } from '../types';
 import { authService } from '../services/authService';
 import { userService } from '../services/userService';
+import { SelectionModal } from '../components/SelectionModal';
 
 export const UserManagementScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,6 +38,7 @@ export const UserManagementScreen: React.FC = () => {
   const [banType, setBanType] = useState<'permanent' | 'temporary'>('temporary');
   const [banUntil, setBanUntil] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [roleModalVisible, setRoleModalVisible] = useState(false);
 
   useEffect(() => {
     loadUserRole();
@@ -72,7 +76,7 @@ export const UserManagementScreen: React.FC = () => {
       setHasMore(response.pagination?.hasMore || false);
     } catch (error) {
       console.error('Kullanıcılar yüklenemedi:', error);
-      Alert.alert('Hata', 'Kullanıcılar yüklenemedi');
+      showToast('Kullanıcılar yüklenemedi', 'error');
     } finally {
       setLoading(false);
     }
@@ -101,7 +105,7 @@ export const UserManagementScreen: React.FC = () => {
     try {
       const userId = (selectedUser as any).id || (selectedUser as any)._id;
       if (!userId) {
-        Alert.alert('Hata', 'Kullanıcı ID bulunamadı');
+        showToast('Kullanıcı ID bulunamadı', 'error');
         return;
       }
       const banData: any = {
@@ -113,16 +117,16 @@ export const UserManagementScreen: React.FC = () => {
       } else if (banUntil) {
         banData.bannedUntil = banUntil;
       } else {
-        Alert.alert('Hata', 'Ban süresi belirtin veya kalıcı ban seçin');
+        showToast('Ban süresi belirtin veya kalıcı ban seçin', 'warning');
         return;
       }
 
       await adminService.banUser(userId, banData);
-      Alert.alert('Başarılı', 'Kullanıcı banlandı');
+      showToast('Kullanıcı banlandı', 'success');
       setModalVisible(false);
       loadUsers();
     } catch (error: any) {
-      Alert.alert('Hata', error.response?.data?.message || 'Kullanıcı banlanamadı');
+      showToast(error.response?.data?.message || 'Kullanıcı banlanamadı', 'error');
     }
   };
 
@@ -132,15 +136,15 @@ export const UserManagementScreen: React.FC = () => {
     try {
       const userId = (selectedUser as any).id || (selectedUser as any)._id;
       if (!userId) {
-        Alert.alert('Hata', 'Kullanıcı ID bulunamadı');
+        showToast('Kullanıcı ID bulunamadı', 'error');
         return;
       }
       await adminService.unbanUser(userId);
-      Alert.alert('Başarılı', 'Kullanıcının banı kaldırıldı');
+      showToast('Kullanıcının banı kaldırıldı', 'success');
       setModalVisible(false);
       loadUsers();
     } catch (error) {
-      Alert.alert('Hata', 'Ban kaldırılamadı');
+      showToast('Ban kaldırılamadı', 'error');
     }
   };
 
@@ -150,15 +154,15 @@ export const UserManagementScreen: React.FC = () => {
     try {
       const userId = (selectedUser as any).id || (selectedUser as any)._id;
       if (!userId) {
-        Alert.alert('Hata', 'Kullanıcı ID bulunamadı');
+        showToast('Kullanıcı ID bulunamadı', 'error');
         return;
       }
       await adminService.warnUser(userId, banReason || undefined);
-      Alert.alert('Başarılı', 'Kullanıcıya uyarı verildi');
+      showToast('Kullanıcıya uyarı verildi', 'success');
       setModalVisible(false);
       loadUsers();
     } catch (error) {
-      Alert.alert('Hata', 'Uyarı verilemedi');
+      showToast('Uyarı verilemedi', 'error');
     }
   };
 
@@ -168,15 +172,15 @@ export const UserManagementScreen: React.FC = () => {
     try {
       const userId = (selectedUser as any).id || (selectedUser as any)._id;
       if (!userId) {
-        Alert.alert('Hata', 'Kullanıcı ID bulunamadı');
+        showToast('Kullanıcı ID bulunamadı', 'error');
         return;
       }
       await adminService.changeUserRole(userId, role);
-      Alert.alert('Başarılı', 'Kullanıcı rolü güncellendi');
+      showToast('Kullanıcı rolü güncellendi', 'success');
       setModalVisible(false);
       loadUsers();
     } catch (error: any) {
-      Alert.alert('Hata', error.response?.data?.message || 'Rol değiştirilemedi');
+      showToast(error.response?.data?.message || 'Rol değiştirilemedi', 'error');
     }
   };
 
@@ -243,9 +247,9 @@ export const UserManagementScreen: React.FC = () => {
         </View>
       ) : (
         <FlatList
-        data={users}
-        keyExtractor={(item) => (item as any).id || (item as any)._id || String(Math.random())}
-        renderItem={renderUser}
+          data={users}
+          keyExtractor={(item) => (item as any).id || (item as any)._id || String(Math.random())}
+          renderItem={renderUser}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           onEndReached={() => {
             if (hasMore && !loading) {
@@ -366,18 +370,7 @@ export const UserManagementScreen: React.FC = () => {
                       {isAdmin && (
                         <TouchableOpacity
                           style={[styles.actionButton, styles.roleButton]}
-                          onPress={() => {
-                            Alert.alert(
-                              'Rol Değiştir',
-                              'Yeni rol seçin',
-                              [
-                                { text: 'İptal', style: 'cancel' },
-                                { text: 'User', onPress: () => handleRoleChange('user') },
-                                { text: 'Moderator', onPress: () => handleRoleChange('moderator') },
-                                { text: 'Admin', onPress: () => handleRoleChange('admin') },
-                              ],
-                            );
-                          }}>
+                          onPress={() => setRoleModalVisible(true)}>
                           <Text style={styles.actionButtonText}>Rol Değiştir</Text>
                         </TouchableOpacity>
                       )}
@@ -389,6 +382,18 @@ export const UserManagementScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      <SelectionModal
+        isVisible={roleModalVisible}
+        onClose={() => setRoleModalVisible(false)}
+        title="Rol Değiştir"
+        onSelect={handleRoleChange}
+        options={[
+          { label: 'Kullanıcı', value: 'user', icon: 'person-outline', color: '#757575' },
+          { label: 'Moderatör', value: 'moderator', icon: 'shield-outline', color: '#0095f6' },
+          { label: 'Admin', value: 'admin', icon: 'shield-half-outline', color: '#9C27B0' },
+        ]}
+      />
     </View>
   );
 };

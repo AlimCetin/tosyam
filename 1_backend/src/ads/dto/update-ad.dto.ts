@@ -8,6 +8,10 @@ export class UpdateAdDto {
   title?: string;
 
   @IsOptional()
+  @IsEnum(['image', 'video'])
+  type?: 'image' | 'video';
+
+  @IsOptional()
   @IsUrl({}, { message: 'Media URL must be a valid URL' })
   mediaUrl?: string;
 

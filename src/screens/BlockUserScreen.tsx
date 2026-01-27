@@ -7,21 +7,22 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import { userService } from '../services/userService';
 
 export const BlockUserScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const route = useRoute<any>();
   const { userId } = route.params;
 
   const handleBlock = async () => {
     try {
       await userService.blockUser(userId);
-      Alert.alert('Başarılı', 'Kullanıcı engellendi', [
-        { text: 'Tamam', onPress: () => navigation.goBack() },
-      ]);
+      showToast('Kullanıcı engellendi', 'success');
+      navigation.goBack();
     } catch (error) {
-      Alert.alert('Hata', 'Kullanıcı engellenemedi');
+      showToast('Kullanıcı engellenemedi', 'error');
     }
   };
 

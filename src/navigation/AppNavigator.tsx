@@ -30,6 +30,9 @@ import { AdminPanelScreen } from '../screens/AdminPanelScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
 import { UserManagementScreen } from '../screens/UserManagementScreen';
 import { AdsManagementScreen } from '../screens/AdsManagementScreen';
+import { ConfessionsScreen } from '../screens/ConfessionsScreen';
+import { CreateConfessionScreen } from '../screens/CreateConfessionScreen';
+import { ConfessionCommentsScreen } from '../screens/ConfessionCommentsScreen';
 import { navigationRef } from './navigationRef';
 
 const Stack = createStackNavigator();
@@ -57,7 +60,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ initialRouteName = '
         <Stack.Screen
           name="Login"
           component={LoginScreen}
-          options={{ 
+          options={{
             headerShown: true,
             title: 'Giriş Yap',
             headerLeft: () => null,
@@ -115,8 +118,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ initialRouteName = '
         <Stack.Screen
           name="FollowList"
           component={FollowListScreen}
-          options={({ route }: any) => ({ 
-            title: (route.params as any)?.type === 'followers' ? 'Takipçiler' : 'Takip Edilenler' 
+          options={({ route }: any) => ({
+            title: (route.params as any)?.type === 'followers' ? 'Takipçiler' : 'Takip Edilenler'
           })}
         />
         <Stack.Screen
@@ -167,10 +170,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ initialRouteName = '
         <Stack.Screen
           name="ManageHiddenUsers"
           component={ManageHiddenUsersScreen}
-          options={({ route }: any) => ({ 
-            title: (route.params as any)?.type === 'followers' 
-              ? 'Gizli Takipçiler' 
-              : 'Gizli Takip Edilenler' 
+          options={({ route }: any) => ({
+            title: (route.params as any)?.type === 'followers'
+              ? 'Gizli Takipçiler'
+              : 'Gizli Takip Edilenler'
           })}
         />
         <Stack.Screen
@@ -186,7 +189,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ initialRouteName = '
         <Stack.Screen
           name="ProfileMenu"
           component={ProfileMenuScreen}
-          options={{ 
+          options={{
             presentation: 'transparentModal',
             headerShown: false,
             cardStyle: { backgroundColor: 'transparent' }
@@ -195,7 +198,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ initialRouteName = '
         <Stack.Screen
           name="Register"
           component={RegisterScreen}
-          options={{ 
+          options={{
             headerShown: true,
             title: 'Kayıt Ol',
             gestureEnabled: true,
@@ -220,6 +223,16 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ initialRouteName = '
           name="AdsManagement"
           component={AdsManagementScreen}
           options={{ title: 'Reklam Yönetimi' }}
+        />
+        <Stack.Screen
+          name="CreateConfession"
+          component={CreateConfessionScreen}
+          options={{ title: 'İtiraf Et' }}
+        />
+        <Stack.Screen
+          name="ConfessionComments"
+          component={ConfessionCommentsScreen}
+          options={{ title: 'Yorumlar' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

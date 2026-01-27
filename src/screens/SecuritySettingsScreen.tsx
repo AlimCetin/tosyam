@@ -10,11 +10,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import api from '../services/api';
 
 export const SecuritySettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -47,23 +49,23 @@ export const SecuritySettingsScreen: React.FC = () => {
 
   const handleChangePassword = async () => {
     if (!currentPassword.trim()) {
-      Alert.alert('Hata', 'Mevcut şifre boş bırakılamaz');
+      showToast('Mevcut şifre boş bırakılamaz', 'warning');
       return;
     }
 
     if (!newPassword.trim()) {
-      Alert.alert('Hata', 'Yeni şifre boş bırakılamaz');
+      showToast('Yeni şifre boş bırakılamaz', 'warning');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Hata', 'Yeni şifreler eşleşmiyor');
+      showToast('Yeni şifreler eşleşmiyor', 'warning');
       return;
     }
 
     const passwordError = validatePassword(newPassword);
     if (passwordError) {
-      Alert.alert('Hata', passwordError);
+      showToast(passwordError, 'warning');
       return;
     }
 
@@ -74,18 +76,15 @@ export const SecuritySettingsScreen: React.FC = () => {
         newPassword,
       });
 
-      Alert.alert('Başarılı', 'Şifre başarıyla değiştirildi', [
-        { text: 'Tamam', onPress: () => {
-          setCurrentPassword('');
-          setNewPassword('');
-          setConfirmPassword('');
-          navigation.goBack();
-        }},
-      ]);
+      showToast('Şifre başarıyla değiştirildi', 'success');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      navigation.goBack();
     } catch (error: any) {
       console.error('Şifre değiştirme hatası:', error);
       const errorMessage = error.response?.data?.message || 'Şifre değiştirilemedi';
-      Alert.alert('Hata', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setSaving(false);
     }
@@ -95,7 +94,7 @@ export const SecuritySettingsScreen: React.FC = () => {
     <ScrollView style={styles.container}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Şifre Değiştir</Text>
-        
+
         <View style={styles.formGroup}>
           <Text style={styles.label}>Mevcut Şifre</Text>
           <View style={styles.passwordContainer}>
@@ -182,17 +181,17 @@ export const SecuritySettingsScreen: React.FC = () => {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Güvenlik İpuçları</Text>
-        
+
         <View style={styles.tipItem}>
           <Icon name="shield-checkmark-outline" size={20} color="#0095f6" />
           <Text style={styles.tipText}>Güçlü ve benzersiz bir şifre kullanın</Text>
         </View>
-        
+
         <View style={styles.tipItem}>
           <Icon name="lock-closed-outline" size={20} color="#0095f6" />
           <Text style={styles.tipText}>Şifrenizi düzenli olarak değiştirin</Text>
         </View>
-        
+
         <View style={styles.tipItem}>
           <Icon name="key-outline" size={20} color="#0095f6" />
           <Text style={styles.tipText}>Şifrenizi kimseyle paylaşmayın</Text>

@@ -12,12 +12,21 @@ import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Post } from '../types';
 import { adService } from '../services/adService';
+import { SOCKET_URL } from '../constants/config';
 
 interface AdCardProps {
   ad: Post;
 }
 
 export const AdCard: React.FC<AdCardProps> = ({ ad }) => {
+  const getFullMediaUrl = (url: string | undefined): string => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('file:') || url.startsWith('content:') || url.startsWith('data:')) {
+      return url;
+    }
+    return `${SOCKET_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   const handleAdClick = async () => {
     try {
       await adService.recordClick(ad.id);
@@ -52,7 +61,7 @@ export const AdCard: React.FC<AdCardProps> = ({ ad }) => {
         {ad.adType === 'video' && ad.mediaUrl ? (
           <View style={styles.videoContainer}>
             <Video
-              source={{ uri: ad.mediaUrl }}
+              source={{ uri: getFullMediaUrl(ad.mediaUrl) }}
               style={styles.media}
               resizeMode="contain"
               controls={false}
@@ -65,7 +74,7 @@ export const AdCard: React.FC<AdCardProps> = ({ ad }) => {
           </View>
         ) : (
           <Image
-            source={{ uri: ad.mediaUrl || ad.image }}
+            source={{ uri: getFullMediaUrl(ad.mediaUrl || ad.image) }}
             style={styles.media}
             onLoad={handleAdView}
           />

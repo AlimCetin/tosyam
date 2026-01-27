@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { Storage } from './src/utils/storage';
+import { ToastProvider } from './src/context/ToastContext';
 import { API_BASE_URL } from './src/constants/config';
 import api from './src/services/api';
 import { updateService } from './src/services/updateService';
@@ -23,7 +24,7 @@ function App() {
   useEffect(() => {
     checkAuth();
     const cleanup = setupConnectionMonitoring();
-    
+
     // Uygulama açıldığında güncelleme kontrolü yap (backend bağlantısı kurulduktan sonra)
     const checkUpdateAfterConnection = async () => {
       const isConnected = await checkBackendConnection();
@@ -35,10 +36,10 @@ function App() {
         }, 2000);
       }
     };
-    
+
     // İlk kontrol - backend bağlantısı kurulduktan sonra
     checkUpdateAfterConnection();
-    
+
     return () => {
       if (cleanup) {
         cleanup();
@@ -68,7 +69,7 @@ function App() {
 
     try {
       isCheckingConnection.current = true;
-      
+
       // Network durumunu kontrol et
       const netInfo = await NetInfo.fetch();
       if (!netInfo.isConnected) {
@@ -172,7 +173,9 @@ function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppNavigator initialRouteName={isAuthenticated ? 'MainTabs' : 'Login'} />
+      <ToastProvider>
+        <AppNavigator initialRouteName={isAuthenticated ? 'MainTabs' : 'Login'} />
+      </ToastProvider>
     </SafeAreaProvider>
   );
 }

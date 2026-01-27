@@ -15,7 +15,9 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { userService } from '../services/userService';
 import { postService } from '../services/postService';
 import { authService } from '../services/authService';
-import { User, Post } from '../types';
+import { useToast } from '../context/ToastContext';
+import { confessionService } from '../services/confessionService';
+import { User, Post, Confession } from '../types';
 import Video from 'react-native-video';
 import { SOCKET_URL } from '../constants/config';
 
@@ -35,9 +37,12 @@ const getVideoUrl = (url: string) => {
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const { showToast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [confessions, setConfessions] = useState<Confession[]>([]);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [activeTab, setActiveTab] = useState<'posts' | 'confessions'>('posts');
 
   // Screen focus olduğunda veya params değiştiğinde çalışır
   useFocusEffect(
@@ -107,6 +112,16 @@ export const ProfileScreen: React.FC = () => {
       const isOwn = isViewingOwnProfile || (currentUserId && userDataId === currentUserId);
 
       setIsOwnProfile(isOwn);
+
+      // Kendi profiliyse itirafları da yükle
+      if (isOwn) {
+        try {
+          const confessionsData = await confessionService.getMyConfessions();
+          setConfessions(confessionsData);
+        } catch (err) {
+          console.error('İtiraflar yüklenemedi:', err);
+        }
+      }
     } catch (error) {
       console.error('Profil yüklenemedi:', error);
     }
@@ -182,7 +197,7 @@ export const ProfileScreen: React.FC = () => {
 
               // Başkasının profili ve gizliyse
               if (user.hideFollowers) {
-                Alert.alert('Gizli', 'Bu kullanıcı takipçi listesini gizlemiş');
+                showToast('Bu kullanıcı takipçi listesini gizlemiş', 'info');
                 return;
               }
 
@@ -208,7 +223,7 @@ export const ProfileScreen: React.FC = () => {
 
               // Başkasının profili ve gizliyse
               if (user.hideFollowing) {
-                Alert.alert('Gizli', 'Bu kullanıcı takip edilen listesini gizlemiş');
+                showToast('Bu kullanıcı takip edilen listesini gizlemiş', 'info');
                 return;
               }
 
@@ -273,39 +288,83 @@ export const ProfileScreen: React.FC = () => {
           </>
         )}
       </View>
+
+      {isOwnProfile && (
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
+            onPress={() => setActiveTab('posts')}>
+            <Icon name="grid-outline" size={24} color={activeTab === 'posts' ? '#000' : '#8e8e8e'} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'confessions' && styles.activeTab]}
+            onPress={() => setActiveTab('confessions')}>
+            <Icon name="chatbubbles-outline" size={24} color={activeTab === 'confessions' ? '#000' : '#8e8e8e'} />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
+  );
+
+  const renderPostItem = ({ item }: { item: Post }) => (
+    <TouchableOpacity
+      style={styles.postThumb}
+      onPress={() => navigation.navigate('PostDetail', { postId: item.id })}>
+      {item.video ? (
+        <View style={[styles.thumbImage, { backgroundColor: '#000' }]}>
+          <Video
+            source={{ uri: getVideoUrl(item.video as string) }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            paused={true}
+            muted={true}
+          />
+          <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.1)' }]}>
+            <Icon name="play-circle" size={32} color="rgba(255,255,255,0.8)" />
+          </View>
+        </View>
+      ) : (
+        <Image source={{ uri: item.image || '' }} style={styles.thumbImage} />
+      )}
+    </TouchableOpacity>
+  );
+
+  const renderConfessionItem = ({ item }: { item: Confession }) => (
+    <TouchableOpacity
+      style={styles.confessionCard}
+      onPress={() => navigation.navigate('ConfessionComments', { confessionId: item.id })}>
+      <Text style={styles.confessionText} numberOfLines={3}>{item.text}</Text>
+      <View style={styles.confessionFooter}>
+        <View style={styles.confessionStats}>
+          <Icon name="heart" size={12} color="#8e8e8e" />
+          <Text style={styles.confessionStatText}>{item.likeCount}</Text>
+          <Icon name="chatbubble" size={12} color="#8e8e8e" style={{ marginLeft: 8 }} />
+          <Text style={styles.confessionStatText}>{item.commentCount}</Text>
+        </View>
+        <Text style={styles.confessionDate}>
+          {new Date(item.createdAt).toLocaleDateString('tr-TR')}
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={posts}
-        numColumns={3}
+        data={(activeTab === 'posts' ? posts : confessions) as any[]}
+        numColumns={activeTab === 'posts' ? 3 : 1}
+        key={activeTab} // Tab değiştiğinde listeyi yeniden oluştur (numColumns değiştiği için)
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={{ paddingBottom: 20 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.postThumb}
-            onPress={() => navigation.navigate('PostDetail', { postId: item.id })}>
-            {item.video ? (
-              <View style={[styles.thumbImage, { backgroundColor: '#000' }]}>
-                <Video
-                  source={{ uri: getVideoUrl(item.video as string) }}
-                  style={StyleSheet.absoluteFill}
-                  resizeMode="cover"
-                  paused={true}
-                  muted={true}
-                />
-                <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.1)' }]}>
-                  <Icon name="play-circle" size={32} color="rgba(255,255,255,0.8)" />
-                </View>
-              </View>
-            ) : (
-              <Image source={{ uri: item.image || '' }} style={styles.thumbImage} />
-            )}
-          </TouchableOpacity>
-        )}
+        renderItem={activeTab === 'posts' ? renderPostItem : (renderConfessionItem as any)}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {activeTab === 'posts' ? 'Henüz gönderi yok' : 'Henüz itiraf yok'}
+            </Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
@@ -437,5 +496,60 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#efefef',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#efefef',
+    marginTop: 12,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#000',
+  },
+  confessionCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#efefef',
+  },
+  confessionText: {
+    fontSize: 14,
+    color: '#262626',
+    marginBottom: 8,
+  },
+  confessionFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  confessionStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  confessionStatText: {
+    fontSize: 12,
+    color: '#8e8e8e',
+    marginLeft: 4,
+  },
+  confessionDate: {
+    fontSize: 11,
+    color: '#8e8e8e',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#8e8e8e',
+    fontSize: 14,
   },
 });

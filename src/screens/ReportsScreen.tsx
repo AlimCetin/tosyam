@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useToast } from '../context/ToastContext';
 import Video from 'react-native-video';
 import { reportService } from '../services/reportService';
 import { adminService } from '../services/adminService';
@@ -22,6 +23,7 @@ import { Report } from '../types';
 
 export const ReportsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,7 +75,7 @@ export const ReportsScreen: React.FC = () => {
       setHasMore(response.pagination?.hasMore || false);
     } catch (error) {
       console.error('Şikayetler yüklenemedi:', error);
-      Alert.alert('Hata', 'Şikayetler yüklenemedi');
+      showToast('Şikayetler yüklenemedi', 'error');
     } finally {
       setLoading(false);
     }
@@ -90,7 +92,7 @@ export const ReportsScreen: React.FC = () => {
     try {
       const reportId = (report as any).id || (report as any)._id;
       if (!reportId) {
-        Alert.alert('Hata', 'Şikayet ID bulunamadı');
+        showToast('Şikayet ID bulunamadı', 'error');
         return;
       }
       const fullReport = await reportService.getReportById(reportId);
@@ -99,7 +101,7 @@ export const ReportsScreen: React.FC = () => {
       setModalVisible(true);
     } catch (error) {
       console.error('Şikayet detayı yüklenemedi:', error);
-      Alert.alert('Hata', 'Şikayet detayı yüklenemedi');
+      showToast('Şikayet detayı yüklenemedi', 'error');
     }
   };
 
@@ -109,19 +111,19 @@ export const ReportsScreen: React.FC = () => {
     try {
       const reportId = (selectedReport as any).id || (selectedReport as any)._id;
       if (!reportId) {
-        Alert.alert('Hata', 'Şikayet ID bulunamadı');
+        showToast('Şikayet ID bulunamadı', 'error');
         return;
       }
       await reportService.updateReport(reportId, {
         status,
         adminNote: adminNote || undefined,
       });
-      Alert.alert('Başarılı', 'Şikayet durumu güncellendi');
+      showToast('Şikayet durumu güncellendi', 'success');
       setModalVisible(false);
       setSelectedReport(null);
       loadReports();
     } catch (error) {
-      Alert.alert('Hata', 'Şikayet güncellenemedi');
+      showToast('Şikayet güncellenemedi', 'error');
     }
   };
 
@@ -147,7 +149,7 @@ export const ReportsScreen: React.FC = () => {
   const handleBanUser = async () => {
     const userId = getReportedUserId();
     if (!userId) {
-      Alert.alert('Hata', 'Şikayet edilen kullanıcı bulunamadı');
+      showToast('Şikayet edilen kullanıcı bulunamadı', 'error');
       return;
     }
 
@@ -162,32 +164,22 @@ export const ReportsScreen: React.FC = () => {
         // Tarihi ISO formatına çevir
         const banDate = new Date(banUntil);
         if (isNaN(banDate.getTime())) {
-          Alert.alert('Hata', 'Geçersiz tarih formatı. Lütfen YYYY-MM-DD formatında girin.');
+          showToast('Geçersiz tarih formatı. Lütfen YYYY-MM-DD formatında girin.', 'warning');
           return;
         }
         // Geçmiş tarih kontrolü
         if (banDate <= new Date()) {
-          Alert.alert('Hata', 'Ban bitiş tarihi bugünden sonra olmalıdır.');
+          showToast('Ban bitiş tarihi bugünden sonra olmalıdır.', 'warning');
           return;
         }
         banData.bannedUntil = banDate.toISOString();
       } else {
-        Alert.alert('Hata', 'Ban süresi belirtin veya kalıcı ban seçin');
+        showToast('Ban süresi belirtin veya kalıcı ban seçin', 'warning');
         return;
       }
 
       await adminService.banUser(userId, banData);
-      
-      // Şikayeti resolved olarak işaretle
-      const reportId = (selectedReport as any).id || (selectedReport as any)._id;
-      if (reportId) {
-        await reportService.updateReport(reportId, {
-          status: 'resolved',
-          adminNote: adminNote || `Kullanıcı banlandı: ${banReason || 'Şikayet nedeniyle'}`,
-        });
-      }
-
-      Alert.alert('Başarılı', 'Kullanıcı banlandı ve şikayet çözüldü olarak işaretlendi');
+      showToast('Kullanıcı banlandı ve şikayet çözüldü', 'success');
       setBanModalVisible(false);
       setModalVisible(false);
       setSelectedReport(null);
@@ -195,14 +187,14 @@ export const ReportsScreen: React.FC = () => {
       setBanUntil('');
       loadReports();
     } catch (error: any) {
-      Alert.alert('Hata', error.response?.data?.message || 'Kullanıcı banlanamadı');
+      showToast(error.response?.data?.message || 'Kullanıcı banlanamadı', 'error');
     }
   };
 
   const openBanModal = () => {
     const userId = getReportedUserId();
     if (!userId) {
-      Alert.alert('Hata', 'Şikayet edilen kullanıcı bulunamadı');
+      showToast('Şikayet edilen kullanıcı bulunamadı', 'error');
       return;
     }
     setBanModalVisible(true);
@@ -250,8 +242,8 @@ export const ReportsScreen: React.FC = () => {
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
             <Text style={styles.statusText}>
               {item.status === 'pending' ? 'Beklemede' :
-               item.status === 'in_review' ? 'İnceleniyor' :
-               item.status === 'resolved' ? 'Çözüldü' : 'Reddedildi'}
+                item.status === 'in_review' ? 'İnceleniyor' :
+                  item.status === 'resolved' ? 'Çözüldü' : 'Reddedildi'}
             </Text>
           </View>
         </View>
@@ -313,9 +305,9 @@ export const ReportsScreen: React.FC = () => {
         </View>
       ) : (
         <FlatList
-        data={reports}
-        keyExtractor={(item) => (item as any).id || (item as any)._id || String(Math.random())}
-        renderItem={renderReport}
+          data={reports}
+          keyExtractor={(item) => (item as any).id || (item as any)._id || String(Math.random())}
+          renderItem={renderReport}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           onEndReached={() => {
             if (hasMore && !loading) {
@@ -361,21 +353,21 @@ export const ReportsScreen: React.FC = () => {
                     <Text style={styles.detailLabel}>Tür:</Text>
                     <Text style={styles.detailValue}>
                       {selectedReport.type === 'post' ? 'Gönderi' :
-                       selectedReport.type === 'user' ? 'Kullanıcı' :
-                       selectedReport.type === 'comment' ? 'Yorum' :
-                       selectedReport.type === 'message' ? 'Mesaj' : selectedReport.type}
+                        selectedReport.type === 'user' ? 'Kullanıcı' :
+                          selectedReport.type === 'comment' ? 'Yorum' :
+                            selectedReport.type === 'message' ? 'Mesaj' : selectedReport.type}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Sebep:</Text>
                     <Text style={styles.detailValue}>
                       {selectedReport.reason === 'spam' ? 'Spam' :
-                       selectedReport.reason === 'harassment' ? 'Taciz' :
-                       selectedReport.reason === 'inappropriate_content' ? 'Uygunsuz İçerik' :
-                       selectedReport.reason === 'copyright' ? 'Telif Hakkı' :
-                       selectedReport.reason === 'fake_news' ? 'Sahte Bilgi' :
-                       selectedReport.reason === 'hate_speech' ? 'Nefret Söylemi' :
-                       selectedReport.reason === 'other' ? 'Diğer' : selectedReport.reason}
+                        selectedReport.reason === 'harassment' ? 'Taciz' :
+                          selectedReport.reason === 'inappropriate_content' ? 'Uygunsuz İçerik' :
+                            selectedReport.reason === 'copyright' ? 'Telif Hakkı' :
+                              selectedReport.reason === 'fake_news' ? 'Sahte Bilgi' :
+                                selectedReport.reason === 'hate_speech' ? 'Nefret Söylemi' :
+                                  selectedReport.reason === 'other' ? 'Diğer' : selectedReport.reason}
                     </Text>
                   </View>
                   {selectedReport.description && (
@@ -393,7 +385,7 @@ export const ReportsScreen: React.FC = () => {
                   {(selectedReport as any).reportedItem && (
                     <View style={styles.reportedItemContainer}>
                       <Text style={styles.sectionTitle}>Şikayet Edilen İçerik:</Text>
-                      
+
                       {selectedReport.type === 'post' && (selectedReport as any).reportedItem && (
                         <View style={styles.postPreview}>
                           {(selectedReport as any).reportedItem.video ? (
@@ -410,7 +402,7 @@ export const ReportsScreen: React.FC = () => {
                               style={styles.postMedia}
                             />
                           ) : null}
-                          
+
                           {(selectedReport as any).reportedItem.caption && (
                             <View style={styles.postCaption}>
                               <Text style={styles.postCaptionText}>
@@ -418,15 +410,15 @@ export const ReportsScreen: React.FC = () => {
                               </Text>
                             </View>
                           )}
-                          
+
                           <TouchableOpacity
                             style={styles.viewPostButton}
                             onPress={() => {
                               if ((selectedReport as any).reportedItem?.id) {
                                 setModalVisible(false);
                                 setTimeout(() => {
-                                  navigation.navigate('PostDetail', { 
-                                    postId: (selectedReport as any).reportedItem.id 
+                                  navigation.navigate('PostDetail', {
+                                    postId: (selectedReport as any).reportedItem.id
                                   });
                                 }, 100);
                               }
@@ -440,8 +432,8 @@ export const ReportsScreen: React.FC = () => {
                       {selectedReport.type === 'user' && (selectedReport as any).reportedItem && (
                         <View style={styles.userPreview}>
                           <Image
-                            source={{ 
-                              uri: (selectedReport as any).reportedItem.avatar || 'https://via.placeholder.com/80' 
+                            source={{
+                              uri: (selectedReport as any).reportedItem.avatar || 'https://via.placeholder.com/80'
                             }}
                             style={styles.userPreviewAvatar}
                           />
@@ -459,8 +451,8 @@ export const ReportsScreen: React.FC = () => {
                               if ((selectedReport as any).reportedItem?.id) {
                                 setModalVisible(false);
                                 setTimeout(() => {
-                                  navigation.navigate('Profile', { 
-                                    userId: (selectedReport as any).reportedItem.id 
+                                  navigation.navigate('Profile', {
+                                    userId: (selectedReport as any).reportedItem.id
                                   });
                                 }, 100);
                               }
@@ -492,8 +484,8 @@ export const ReportsScreen: React.FC = () => {
                       <Text style={styles.sectionTitle}>Şikayet Eden:</Text>
                       <View style={styles.reporterInfo}>
                         <Image
-                          source={{ 
-                            uri: (selectedReport as any).reporter.avatar || 'https://via.placeholder.com/50' 
+                          source={{
+                            uri: (selectedReport as any).reporter.avatar || 'https://via.placeholder.com/50'
                           }}
                           style={styles.reporterAvatar}
                         />

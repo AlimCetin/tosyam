@@ -11,11 +11,13 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useToast } from '../context/ToastContext';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
 
 export const PrivacySettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hideFollowers, setHideFollowers] = useState(false);
@@ -49,10 +51,10 @@ export const PrivacySettingsScreen: React.FC = () => {
       const updatedUser = await userService.getUser('me');
       authService.setCurrentUser(updatedUser);
 
-      Alert.alert('Başarılı', 'Gizlilik ayarları güncellendi');
+      showToast('Gizlilik ayarları güncellendi', 'success');
     } catch (error: any) {
       console.error('Ayarlar güncellenemedi:', error);
-      Alert.alert('Hata', error.response?.data?.message || 'Ayarlar güncellenemedi');
+      showToast(error.response?.data?.message || 'Ayarlar güncellenemedi', 'error');
     } finally {
       setSaving(false);
     }
@@ -78,7 +80,7 @@ export const PrivacySettingsScreen: React.FC = () => {
     <ScrollView style={styles.container}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Takipçiler</Text>
-        
+
         <View style={styles.settingItem}>
           <View style={styles.settingLeft}>
             <Icon name="people-outline" size={24} color="#000" />
@@ -117,7 +119,7 @@ export const PrivacySettingsScreen: React.FC = () => {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Takip Edilenler</Text>
-        
+
         <View style={styles.settingItem}>
           <View style={styles.settingLeft}>
             <Icon name="people-outline" size={24} color="#000" />

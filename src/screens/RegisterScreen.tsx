@@ -12,10 +12,12 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import { authService } from '../services/authService';
 
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,23 +26,23 @@ export const RegisterScreen: React.FC = () => {
   const handleRegister = async () => {
     // Validasyon
     if (!fullName.trim()) {
-      Alert.alert('Hata', 'Lütfen adınızı ve soyadınızı girin');
+      showToast('Lütfen adınızı ve soyadınızı girin', 'warning');
       return;
     }
     if (!email.trim()) {
-      Alert.alert('Hata', 'Lütfen e-posta adresinizi girin');
+      showToast('Lütfen e-posta adresinizi girin', 'warning');
       return;
     }
     if (!email.includes('@')) {
-      Alert.alert('Hata', 'Lütfen geçerli bir e-posta adresi girin');
+      showToast('Lütfen geçerli bir e-posta adresi girin', 'warning');
       return;
     }
     if (!password.trim()) {
-      Alert.alert('Hata', 'Lütfen şifrenizi girin');
+      showToast('Lütfen şifrenizi girin', 'warning');
       return;
     }
     if (password.length < 8) {
-      Alert.alert('Hata', 'Şifre en az 8 karakter olmalıdır');
+      showToast('Şifre en az 8 karakter olmalıdır', 'warning');
       return;
     }
     // Password complexity check
@@ -48,11 +50,11 @@ export const RegisterScreen: React.FC = () => {
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
     const hasSpecialChar = /[@$!%*?&]/.test(password);
-    
+
     if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
-      Alert.alert(
-        'Hata',
-        'Şifre en az bir büyük harf, bir küçük harf, bir sayı ve bir özel karakter (@$!%*?&) içermelidir'
+      showToast(
+        'Şifre en az bir büyük harf, bir küçük harf, bir sayı ve bir özel karakter içermelidir',
+        'warning'
       );
       return;
     }
@@ -71,7 +73,7 @@ export const RegisterScreen: React.FC = () => {
       });
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Kayıt yapılamadı';
-      Alert.alert('Hata', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

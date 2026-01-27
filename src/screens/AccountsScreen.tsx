@@ -8,52 +8,43 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { authService } from '../services/authService';
 import { userService } from '../services/userService';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 export const AccountsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
+  const [deleteModalVisible, setDeleteModalVisible] = React.useState(false);
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Hesabı Sil',
-      'Hesabınızı silmek istediğinize emin misiniz? Bu işlem geri alınamaz. Tüm gönderileriniz, yorumlarınız, mesajlarınız ve diğer verileriniz kalıcı olarak silinecektir.',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Hesabı Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await userService.deleteAccount();
-              
-              // Hesap silindikten sonra çıkış yap ve login ekranına yönlendir
-              authService.logout();
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-              });
-              
-              Alert.alert('Başarılı', 'Hesabınız başarıyla silindi.');
-            } catch (error: any) {
-              console.error('Hesap silme hatası:', error);
-              Alert.alert(
-                'Hata',
-                error.response?.data?.message || 'Hesap silinirken bir hata oluştu. Lütfen tekrar deneyin.'
-              );
-            }
-          },
-        },
-      ]
-    );
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    try {
+      await userService.deleteAccount();
+
+      // Hesap silindikten sonra çıkış yap ve login ekranına yönlendir
+      authService.logout();
+      showToast('Hesabınız başarıyla silindi.', 'success');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error: any) {
+      console.error('Hesap silme hatası:', error);
+      showToast(error.response?.data?.message || 'Hesap silinirken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+    }
   };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Hesap İşlemleri</Text>
-        
+
         <TouchableOpacity style={styles.settingItem} onPress={handleDeleteAccount}>
           <View style={styles.settingLeft}>
             <Icon name="trash-outline" size={24} color="#ed4956" />
@@ -69,6 +60,17 @@ export const AccountsScreen: React.FC = () => {
           Hesabınızı silmek, tüm verilerinizin kalıcı olarak silinmesine neden olur. Bu işlem geri alınamaz.
         </Text>
       </View>
+
+      <ConfirmationModal
+        isVisible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={confirmDeleteAccount}
+        title="Hesabı Sil"
+        message="Hesabınızı silmek istediğinize emin misiniz? Bu işlem geri alınamaz. Tüm verileriniz kalıcı olarak silinecektir."
+        confirmText="Hesabı Sil"
+        isDestructive
+        icon="warning-outline"
+      />
     </ScrollView>
   );
 };

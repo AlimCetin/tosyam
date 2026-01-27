@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { HomeScreen } from '../screens/HomeScreen';
+import { ConfessionsScreen } from '../screens/ConfessionsScreen';
 import { CreateScreen } from '../screens/CreateScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 
@@ -20,6 +21,8 @@ export const TabNavigator = () => {
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Confessions') {
+            iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
           } else if (route.name === 'Create') {
             iconName = focused ? 'add-circle' : 'add-circle-outline';
           } else if (route.name === 'ProfileTab') {
@@ -53,6 +56,11 @@ export const TabNavigator = () => {
         name="Home"
         component={HomeScreen}
         options={{ title: 'Ana Sayfa' }}
+      />
+      <Tab.Screen
+        name="Confessions"
+        component={ConfessionsScreen}
+        options={{ title: 'İtiraflar' }}
       />
       <Tab.Screen
         name="Create"

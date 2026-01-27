@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useToast } from '../context/ToastContext';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import { PostCard } from '../components/PostCard';
@@ -25,6 +26,7 @@ import { Post, User } from '../types';
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -307,7 +309,7 @@ export const HomeScreen: React.FC = () => {
         return;
       }
       console.error('❌ Paylaşım hatası:', error);
-      Alert.alert('Hata', 'Gönderi paylaşılamadı');
+      showToast('Gönderi paylaşılamadı', 'error');
     }
   };
 

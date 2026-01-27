@@ -11,22 +11,24 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import { authService } from '../services/authService';
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Hata', 'Lütfen e-posta adresinizi ve şifrenizi girin');
+      showToast('Lütfen e-posta adresinizi ve şifrenizi girin', 'warning');
       return;
     }
 
     if (!email.includes('@')) {
-      Alert.alert('Hata', 'Lütfen geçerli bir e-posta adresi girin');
+      showToast('Lütfen geçerli bir e-posta adresi girin', 'warning');
       return;
     }
 
@@ -40,7 +42,7 @@ export const LoginScreen: React.FC = () => {
       });
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Giriş yapılamadı';
-      Alert.alert('Hata', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

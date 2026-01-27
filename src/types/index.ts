@@ -51,6 +51,22 @@ export interface Comment {
   createdAt: string;
 }
 
+export interface Confession {
+  id: string;
+  text: string;
+  likeCount: number;
+  commentCount: number;
+  isLiked: boolean;
+  createdAt: string;
+}
+
+export interface ConfessionComment {
+  id: string;
+  text: string;
+  userInitials: string;
+  createdAt: string;
+}
+
 export interface Message {
   id: string;
   _id?: string;

@@ -13,6 +13,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import ImagePicker from 'react-native-image-crop-picker';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { userService } from '../services/userService';
@@ -21,6 +22,7 @@ import { User } from '../types';
 
 export const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -45,7 +47,7 @@ export const EditProfileScreen: React.FC = () => {
       setAvatarUri(userData.avatar || null);
     } catch (error) {
       console.error('Kullanıcı bilgileri yüklenemedi:', error);
-      Alert.alert('Hata', 'Profil bilgileri yüklenemedi');
+      showToast('Profil bilgileri yüklenemedi', 'error');
     } finally {
       setLoading(false);
     }
@@ -78,24 +80,24 @@ export const EditProfileScreen: React.FC = () => {
       .catch((error) => {
         if (error.message !== 'User cancelled image selection') {
           console.error('Resim seçme hatası:', error);
-          Alert.alert('Hata', 'Resim seçilemedi');
+          showToast('Resim seçilemedi', 'error');
         }
       });
   };
 
   const handleSave = async () => {
     if (!fullName.trim()) {
-      Alert.alert('Hata', 'Ad Soyad boş bırakılamaz');
+      showToast('Ad Soyad boş bırakılamaz', 'warning');
       return;
     }
 
     if (fullName.length > 50) {
-      Alert.alert('Hata', 'Ad Soyad en fazla 50 karakter olabilir');
+      showToast('Ad Soyad en fazla 50 karakter olabilir', 'warning');
       return;
     }
 
     if (bio.length > 150) {
-      Alert.alert('Hata', 'Bio en fazla 150 karakter olabilir');
+      showToast('Bio en fazla 150 karakter olabilir', 'warning');
       return;
     }
 
@@ -118,12 +120,11 @@ export const EditProfileScreen: React.FC = () => {
       const updatedUser = await userService.getUser('me');
       authService.setCurrentUser(updatedUser);
 
-      Alert.alert('Başarılı', 'Profil güncellendi', [
-        { text: 'Tamam', onPress: () => navigation.goBack() },
-      ]);
+      showToast('Profil güncellendi', 'success');
+      navigation.goBack();
     } catch (error: any) {
       console.error('Profil güncellenemedi:', error);
-      Alert.alert('Hata', error.response?.data?.message || 'Profil güncellenemedi');
+      showToast(error.response?.data?.message || 'Profil güncellenemedi', 'error');
     } finally {
       setSaving(false);
     }

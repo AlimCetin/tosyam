@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
@@ -17,9 +18,10 @@ import { User } from '../types';
 
 export const ManageHiddenUsersScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const route = useRoute<any>();
   const { type } = route.params; // 'followers' or 'following'
-  
+
   const [users, setUsers] = useState<User[]>([]);
   const [hiddenUsers, setHiddenUsers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,20 +35,20 @@ export const ManageHiddenUsersScreen: React.FC = () => {
     try {
       setLoading(true);
       const currentUser = await userService.getUser('me');
-      const hiddenList = type === 'followers' 
+      const hiddenList = type === 'followers'
         ? (currentUser.hiddenFollowers || [])
         : (currentUser.hiddenFollowing || []);
-      
+
       setHiddenUsers(hiddenList.map((id: any) => id.toString()));
 
       const userList = type === 'followers'
         ? await userService.getFollowers('me')
         : await userService.getFollowing('me');
-      
+
       setUsers(userList);
     } catch (error) {
       console.error('Kullanıcılar yüklenemedi:', error);
-      Alert.alert('Hata', 'Kullanıcılar yüklenemedi');
+      showToast('Kullanıcılar yüklenemedi', 'error');
     } finally {
       setLoading(false);
     }
@@ -75,12 +77,11 @@ export const ManageHiddenUsersScreen: React.FC = () => {
       const updatedUser = await userService.getUser('me');
       authService.setCurrentUser(updatedUser);
 
-      Alert.alert('Başarılı', 'Gizlilik ayarları güncellendi', [
-        { text: 'Tamam', onPress: () => navigation.goBack() },
-      ]);
+      showToast('Gizlilik ayarları güncellendi', 'success');
+      navigation.goBack();
     } catch (error: any) {
       console.error('Ayarlar güncellenemedi:', error);
-      Alert.alert('Hata', error.response?.data?.message || 'Ayarlar güncellenemedi');
+      showToast(error.response?.data?.message || 'Ayarlar güncellenemedi', 'error');
     } finally {
       setSaving(false);
     }
@@ -88,7 +89,7 @@ export const ManageHiddenUsersScreen: React.FC = () => {
 
   const renderUser = ({ item }: { item: User }) => {
     const isHidden = hiddenUsers.includes(item.id);
-    
+
     return (
       <TouchableOpacity
         style={styles.userItem}

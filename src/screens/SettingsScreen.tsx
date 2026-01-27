@@ -12,13 +12,17 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { authService } from '../services/authService';
+import { useToast } from '../context/ToastContext';
 import { userService } from '../services/userService';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [privateAccount, setPrivateAccount] = React.useState(false);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [logoutModalVisible, setLogoutModalVisible] = React.useState(false);
 
   React.useEffect(() => {
     checkAdminStatus();
@@ -49,24 +53,15 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Çıkış Yap',
-      'Çıkış yapmak istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Çıkış Yap',
-          style: 'destructive',
-          onPress: () => {
-            authService.logout();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
-          },
-        },
-      ]
-    );
+    setLogoutModalVisible(true);
+  };
+
+  const confirmLogout = () => {
+    authService.logout();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
   };
 
   const handleBlockedUsers = () => {
@@ -86,7 +81,7 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleAbout = () => {
-    Alert.alert('Hakkında', 'Tosyam v1.0.0');
+    showToast('Tosyam v1.0.0', 'info');
   };
 
   return (
@@ -177,6 +172,17 @@ export const SettingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <ConfirmationModal
+        isVisible={logoutModalVisible}
+        onClose={() => setLogoutModalVisible(false)}
+        onConfirm={confirmLogout}
+        title="Çıkış Yap"
+        message="Çıkış yapmak istediğinize emin misiniz?"
+        confirmText="Çıkış Yap"
+        isDestructive
+        icon="log-out-outline"
+      />
     </SafeAreaView>
   );
 };

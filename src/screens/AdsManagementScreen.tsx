@@ -14,22 +14,29 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useToast } from '../context/ToastContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { adService } from '../services/adService';
+import { postService } from '../services/postService';
+import { SOCKET_URL } from '../constants/config';
 import { Ad } from '../types';
 import ImagePicker from 'react-native-image-crop-picker';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { authService } from '../services/authService';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { userService } from '../services/userService';
 
 export const AdsManagementScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showToast } = useToast();
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deletingAd, setDeletingAd] = useState<Ad | null>(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -67,16 +74,8 @@ export const AdsManagementScreen: React.FC = () => {
       // Sadece admin ve super_admin erişebilir
       if (role !== 'admin' && role !== 'super_admin') {
         setHasAccess(false);
-        Alert.alert(
-          'Erişim Reddedildi',
-          'Bu sayfaya sadece adminler erişebilir.',
-          [
-            {
-              text: 'Tamam',
-              onPress: () => navigation.goBack(),
-            },
-          ]
-        );
+        showToast('Erişim Reddedildi: Bu sayfaya sadece adminler erişebilir.', 'error');
+        navigation.goBack();
         return;
       }
 
@@ -86,9 +85,8 @@ export const AdsManagementScreen: React.FC = () => {
     } catch (error) {
       console.error('Erişim kontrolü başarısız:', error);
       setHasAccess(false);
-      Alert.alert('Hata', 'Erişim kontrolü yapılamadı', [
-        { text: 'Tamam', onPress: () => navigation.goBack() },
-      ]);
+      showToast('Erişim kontrolü yapılamadı', 'error');
+      navigation.goBack();
     }
   };
 
@@ -106,7 +104,7 @@ export const AdsManagementScreen: React.FC = () => {
       setAds(response.ads || []);
     } catch (error) {
       console.error('Reklamlar yüklenemedi:', error);
-      Alert.alert('Hata', 'Reklamlar yüklenemedi');
+      showToast('Reklamlar yüklenemedi', 'error');
     } finally {
       setLoading(false);
     }
@@ -128,7 +126,7 @@ export const AdsManagementScreen: React.FC = () => {
     setEditingAd(ad);
     setTitle(ad.title);
     setDescription(ad.description || '');
-    setMediaUrl(ad.mediaUrl);
+    setMediaUrl(getFullMediaUrl(ad.mediaUrl));
     setLinkUrl(ad.linkUrl);
     setAdType(ad.type);
     setStatus(ad.status as any);
@@ -139,6 +137,14 @@ export const AdsManagementScreen: React.FC = () => {
     setMaxImpressions(ad.maxImpressions?.toString() || '');
     setBudget(ad.budget?.toString() || '');
     setModalVisible(true);
+  };
+
+  const getFullMediaUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('file:') || url.startsWith('content:') || url.startsWith('data:')) {
+      return url;
+    }
+    return `${SOCKET_URL}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
   const resetForm = () => {
@@ -189,15 +195,40 @@ export const AdsManagementScreen: React.FC = () => {
 
   const handleSave = async () => {
     if (!title || !mediaUrl || !linkUrl || !startDate || !endDate) {
-      Alert.alert('Hata', 'Lütfen tüm gerekli alanları doldurun');
+      showToast('Lütfen tüm gerekli alanları doldurun', 'warning');
       return;
     }
 
     try {
+      setLoading(true);
+      let finalMediaUrl = mediaUrl;
+
+      // Eğer mediaUrl yerel bir dosya yolu ise önce yükle
+      if (mediaUrl.startsWith('file:') || mediaUrl.startsWith('content:') || (!mediaUrl.startsWith('http') && !mediaUrl.startsWith('data:'))) {
+        const formData = new FormData();
+        const fileName = mediaUrl.split('/').pop() || (adType === 'video' ? 'video.mp4' : 'image.jpg');
+
+        formData.append('file', {
+          uri: mediaUrl,
+          type: adType === 'video' ? 'video/mp4' : 'image/jpeg',
+          name: fileName,
+        } as any);
+
+        const uploadResult = await postService.uploadMedia(formData);
+        if (uploadResult && uploadResult.url) {
+          // Backend @IsUrl() beklediği için full URL yapıyoruz
+          finalMediaUrl = `${SOCKET_URL}${uploadResult.url.startsWith('/') ? '' : '/'}${uploadResult.url}`;
+        } else {
+          showToast('Medya yüklenemedi', 'error');
+          setLoading(false);
+          return;
+        }
+      }
+
       const adData = {
         title,
         type: adType,
-        mediaUrl,
+        mediaUrl: finalMediaUrl,
         linkUrl,
         description: description || undefined,
         startDate: new Date(startDate).toISOString(),
@@ -210,45 +241,46 @@ export const AdsManagementScreen: React.FC = () => {
       if (editingAd) {
         const adId = (editingAd as any).id || (editingAd as any)._id;
         if (!adId) {
-          Alert.alert('Hata', 'Reklam ID bulunamadı');
+          showToast('Reklam ID bulunamadı', 'error');
+          setLoading(false);
           return;
         }
         await adService.updateAd(adId, adData);
-        Alert.alert('Başarılı', 'Reklam güncellendi');
+        showToast('Reklam güncellendi', 'success');
       } else {
         await adService.createAd(adData);
-        Alert.alert('Başarılı', 'Reklam oluşturuldu');
+        showToast('Reklam oluşturuldu', 'success');
       }
 
       setModalVisible(false);
       loadAds();
-    } catch (error) {
-      Alert.alert('Hata', 'Reklam kaydedilemedi');
+    } catch (error: any) {
+      console.error('Reklam kaydetme hatası:', error.response?.data || error.message);
+      showToast(error.response?.data?.message || 'Reklam kaydedilemedi', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = async (ad: Ad) => {
-    Alert.alert('Sil', 'Reklamı silmek istediğinize emin misiniz?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const adId = (ad as any).id || (ad as any)._id;
-            if (!adId) {
-              Alert.alert('Hata', 'Reklam ID bulunamadı');
-              return;
-            }
-            await adService.deleteAd(adId);
-            Alert.alert('Başarılı', 'Reklam silindi');
-            loadAds();
-          } catch (error) {
-            Alert.alert('Hata', 'Reklam silinemedi');
-          }
-        },
-      },
-    ]);
+  const handleDelete = (ad: Ad) => {
+    setDeletingAd(ad);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingAd) return;
+    try {
+      const adId = (deletingAd as any).id || (deletingAd as any)._id;
+      if (!adId) {
+        showToast('Reklam ID bulunamadı', 'error');
+        return;
+      }
+      await adService.deleteAd(adId);
+      showToast('Reklam silindi', 'success');
+      loadAds();
+    } catch (error) {
+      showToast('Reklam silinemedi', 'error');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -278,7 +310,7 @@ export const AdsManagementScreen: React.FC = () => {
       </View>
 
       {item.mediaUrl && (
-        <Image source={{ uri: item.mediaUrl }} style={styles.adImage} />
+        <Image source={{ uri: getFullMediaUrl(item.mediaUrl) }} style={styles.adImage} />
       )}
 
       <View style={styles.adStats}>
@@ -481,6 +513,17 @@ export const AdsManagementScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      <ConfirmationModal
+        isVisible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={confirmDelete}
+        title="Reklamı Sil"
+        message="Reklamı silmek istediğinize emin misiniz?"
+        confirmText="Sil"
+        isDestructive
+        icon="trash-outline"
+      />
     </View>
   );
 };
