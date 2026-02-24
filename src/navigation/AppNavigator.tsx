@@ -33,6 +33,11 @@ import { AdsManagementScreen } from '../screens/AdsManagementScreen';
 import { ConfessionsScreen } from '../screens/ConfessionsScreen';
 import { CreateConfessionScreen } from '../screens/CreateConfessionScreen';
 import { ConfessionCommentsScreen } from '../screens/ConfessionCommentsScreen';
+import { CampaignsScreen } from '../screens/CampaignsScreen';
+import { TourismScreen } from '../screens/TourismScreen';
+import { ItemCommentsScreen } from '../screens/ItemCommentsScreen';
+import MyItemsScreen from '../screens/MyItemsScreen';
+import ItemFormScreen from '../screens/ItemFormScreen';
 import { navigationRef } from './navigationRef';
 
 const Stack = createStackNavigator();
@@ -71,6 +76,21 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ initialRouteName = '
           name="MainTabs"
           component={TabNavigator}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Campaigns"
+          component={CampaignsScreen}
+          options={{ title: 'İndirimler' }}
+        />
+        <Stack.Screen
+          name="Tourism"
+          component={TourismScreen}
+          options={{ title: 'Keşfet' }}
+        />
+        <Stack.Screen
+          name="Confessions"
+          component={ConfessionsScreen}
+          options={{ title: 'İtiraflar' }}
         />
         <Stack.Screen
           name="Search"
@@ -233,6 +253,23 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({ initialRouteName = '
           name="ConfessionComments"
           component={ConfessionCommentsScreen}
           options={{ title: 'Yorumlar' }}
+        />
+        <Stack.Screen
+          name="ItemComments"
+          component={ItemCommentsScreen}
+          options={{ title: 'Yorumlar' }}
+        />
+        <Stack.Screen
+          name="MyItems"
+          component={MyItemsScreen}
+          options={{ title: 'Paylaşımlarım' }}
+        />
+        <Stack.Screen
+          name="ItemForm"
+          component={ItemFormScreen}
+          options={({ route }: any) => ({
+            title: route.params?.item ? 'Düzenle' : 'Yeni Ekle'
+          })}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -1,7 +1,7 @@
 import api from './api';
 
 export const reportService = {
-  createReport: async (reportedId: string, type: 'user' | 'post' | 'comment' | 'message', reason: string, description?: string) => {
+  createReport: async (reportedId: string, type: 'user' | 'post' | 'comment' | 'message' | 'campaign' | 'place', reason: string, description?: string) => {
     const { data } = await api.post('/reports', {
       reportedId,
       type,

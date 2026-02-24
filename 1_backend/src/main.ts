@@ -8,6 +8,7 @@ import * as express from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { AppLoggerService } from './common/logger/logger.service';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -97,6 +98,21 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   const port = configService.get<number>('PORT', 3000);
+
+  // Connect Microservice
+  const rabbitMqUrl = configService.get<string>('RABBITMQ_URL') || 'amqp://guest:guest@localhost:5672';
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [rabbitMqUrl],
+      queue: 'notifications_queue',
+      queueOptions: {
+        durable: true,
+      },
+    },
+  });
+
+  await app.startAllMicroservices();
   await app.listen(port);
 
   logger.log(`🚀 Backend is running on: http://localhost:${port}/api`, 'Bootstrap');

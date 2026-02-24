@@ -13,10 +13,13 @@ import { ReportsModule } from './reports/reports.module';
 import { AdminModule } from './admin/admin.module';
 import { AdsModule } from './ads/ads.module';
 import { ConfessionsModule } from './confessions/confessions.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
+import { PlacesModule } from './places/places.module';
 import { AppController } from './app.controller';
 import { AppLoggerService } from './common/logger/logger.service';
 import { RedisModule } from './common/redis/redis.module';
 import { HealthModule } from './health/health.module';
+import { RabbitMQModule } from './common/rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -34,6 +37,7 @@ import { HealthModule } from './health/health.module';
     RedisModule,
     DatabaseModule,
     HealthModule,
+    RabbitMQModule,
     AuthModule,
     UsersModule,
     PostsModule,
@@ -43,6 +47,8 @@ import { HealthModule } from './health/health.module';
     AdminModule,
     AdsModule,
     ConfessionsModule,
+    CampaignsModule,
+    PlacesModule,
   ],
   controllers: [AppController],
   providers: [

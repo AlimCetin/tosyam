@@ -4,12 +4,13 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { StatusBar, useColorScheme, ActivityIndicator, View, Alert, BackHandler, Platform } from 'react-native';
+import { StatusBar, useColorScheme, ActivityIndicator, View, Alert, BackHandler, Platform, AppState, AppStateStatus, DeviceEventEmitter } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { Storage } from './src/utils/storage';
 import { ToastProvider } from './src/context/ToastContext';
+import { NotificationsProvider } from './src/context/NotificationsContext';
 import { API_BASE_URL } from './src/constants/config';
 import api from './src/services/api';
 import { updateService } from './src/services/updateService';
@@ -18,8 +19,8 @@ function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const connectionCheckInterval = useRef<NodeJS.Timeout | null>(null);
   const isCheckingConnection = useRef(false);
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     checkAuth();
@@ -40,13 +41,25 @@ function App() {
     // İlk kontrol - backend bağlantısı kurulduktan sonra
     checkUpdateAfterConnection();
 
+    const appStateSubscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        // App has come to the foreground!
+        checkAuth();
+      }
+      appState.current = nextAppState;
+    });
+
     return () => {
       if (cleanup) {
         cleanup();
       }
-      if (connectionCheckInterval.current) {
-        clearInterval(connectionCheckInterval.current);
+      if (cleanup) {
+        cleanup();
       }
+      appStateSubscription.remove();
     };
   }, []);
 
@@ -129,7 +142,7 @@ function App() {
     });
 
     // Network durumu değişikliklerini dinle
-    const unsubscribe = NetInfo.addEventListener((state) => {
+    const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
       if (!state.isConnected) {
         console.log('❌ İnternet bağlantısı kesildi');
         handleConnectionLoss();
@@ -143,22 +156,15 @@ function App() {
       }
     });
 
-    // Periyodik olarak backend bağlantısını kontrol et (30 saniyede bir)
-    connectionCheckInterval.current = setInterval(async () => {
-      const isConnected = await checkBackendConnection();
-      if (!isConnected) {
-        handleConnectionLoss();
-        if (connectionCheckInterval.current) {
-          clearInterval(connectionCheckInterval.current);
-        }
-      }
-    }, 30000); // 30 saniye
+    // Sunucudan veya API'den bağlantı hatası alındığında çalışacak event listener
+    const unsubscribeApiError = DeviceEventEmitter.addListener('backend-connection-lost', () => {
+      console.log('❌ API isteğinde bağlantı hatası alındı, uygulama kapatılacak');
+      handleConnectionLoss();
+    });
 
     return () => {
-      unsubscribe();
-      if (connectionCheckInterval.current) {
-        clearInterval(connectionCheckInterval.current);
-      }
+      unsubscribeNetInfo();
+      unsubscribeApiError.remove();
     };
   };
 
@@ -174,7 +180,9 @@ function App() {
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <ToastProvider>
-        <AppNavigator initialRouteName={isAuthenticated ? 'MainTabs' : 'Login'} />
+        <NotificationsProvider>
+          <AppNavigator initialRouteName={isAuthenticated ? 'MainTabs' : 'Login'} />
+        </NotificationsProvider>
       </ToastProvider>
     </SafeAreaProvider>
   );

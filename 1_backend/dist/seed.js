@@ -46,6 +46,8 @@ const report_entity_1 = require("./src/entities/report.entity");
 const ad_entity_1 = require("./src/entities/ad.entity");
 const activity_log_entity_1 = require("./src/entities/activity-log.entity");
 const appeal_entity_1 = require("./src/entities/appeal.entity");
+const campaign_entity_1 = require("./src/entities/campaign.entity");
+const place_entity_1 = require("./src/entities/place.entity");
 const bcrypt = __importStar(require("bcryptjs"));
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tosyam';
 const UserModel = mongoose.models[user_entity_1.User.name] || mongoose.model(user_entity_1.User.name, user_entity_1.UserSchema);
@@ -59,6 +61,8 @@ const ReportModel = mongoose.models[report_entity_1.Report.name] || mongoose.mod
 const AdModel = mongoose.models[ad_entity_1.Ad.name] || mongoose.model(ad_entity_1.Ad.name, ad_entity_1.AdSchema);
 const ActivityLogModel = mongoose.models[activity_log_entity_1.ActivityLog.name] || mongoose.model(activity_log_entity_1.ActivityLog.name, activity_log_entity_1.ActivityLogSchema);
 const AppealModel = mongoose.models[appeal_entity_1.Appeal.name] || mongoose.model(appeal_entity_1.Appeal.name, appeal_entity_1.AppealSchema);
+const CampaignModel = mongoose.models[campaign_entity_1.Campaign.name] || mongoose.model(campaign_entity_1.Campaign.name, campaign_entity_1.CampaignSchema);
+const PlaceModel = mongoose.models[place_entity_1.Place.name] || mongoose.model(place_entity_1.Place.name, place_entity_1.PlaceSchema);
 function getRandomElement(array) {
     return array[Math.floor(Math.random() * array.length)];
 }
@@ -204,6 +208,8 @@ async function seed() {
         await ConversationModel.deleteMany({});
         await MessageModel.deleteMany({});
         await NotificationModel.deleteMany({});
+        await CampaignModel.deleteMany({});
+        await PlaceModel.deleteMany({});
         console.log('Veriler temizlendi!');
         console.log('Eski index\'ler temizleniyor...');
         try {
@@ -333,6 +339,7 @@ async function seed() {
                 caption: getRandomElement(captions),
                 likes: likers.map(u => u._id.toString()),
                 commentCount: 0,
+                city: 'Kastamonu - Tosya',
             });
         }
         const insertedPosts = await PostModel.insertMany(posts);
@@ -833,6 +840,45 @@ async function seed() {
                 console.log(`✅ ${userData[1].email} kullanıcısı moderator rolüne ayarlandı.`);
             }
         }
+        console.log('\nCampaigns oluşturuluyor...');
+        const campaigns = [];
+        const businesses = ['Starbucks', 'Koton', 'Burger King', 'Defacto', 'Teknosa', 'MediaMarkt'];
+        for (let i = 0; i < 15; i++) {
+            campaigns.push({
+                businessName: getRandomElement(businesses),
+                title: `${getRandomElement(businesses)}'da Büyük İndirim!`,
+                description: `Seçili ürünlerde %${getRandomElement(['20', '30', '50'])} indirim fırsatı.`,
+                imageUrl: `https://picsum.photos/400/200?random=${i + 2000}`,
+                discountRate: getRandomElement(['10', '20', '30', '40', '50']),
+                city: 'Kastamonu - Tosya',
+                isPaid: Math.random() > 0.5,
+                isActive: true,
+                createdBy: adminUser._id.toString(),
+                startDate: new Date(),
+                endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            });
+        }
+        const insertedCampaigns = await CampaignModel.insertMany(campaigns);
+        console.log(`✅ ${insertedCampaigns.length} kampanya oluşturuldu!`);
+        console.log('\nPlaces oluşturuluyor...');
+        const places = [];
+        const placeNames = ['Ayasofya Camii', 'Galata Kulesi', 'Anıtkabir', 'Topkapı Sarayı', 'Efes Antik Kenti', 'Kapadokya Peribacaları', 'Nemrut Dağı'];
+        const placeCategories = ['Tarihi', 'Müze', 'Doğa', 'Anıt'];
+        for (let i = 0; i < placeNames.length; i++) {
+            places.push({
+                name: placeNames[i],
+                description: `${placeNames[i]} tarihi ve turistik açıdan muazzam bir mirastır. Mutlaka ziyaret etmelisiniz.`,
+                city: 'Kastamonu - Tosya',
+                category: getRandomElement(placeCategories),
+                imageUrl: `https://picsum.photos/400/300?random=${i + 3000}`,
+                address: `${placeNames[i]} Meydanı, Merkez`,
+                workingHours: '09:00 - 18:00',
+                entryFee: i % 2 === 0 ? 'Ücretsiz' : '150 TL',
+                isActive: true
+            });
+        }
+        const insertedPlaces = await PlaceModel.insertMany(places);
+        console.log(`✅ ${insertedPlaces.length} turizm mekânı oluşturuldu!`);
         console.log(`   Email: ${userData[0].email}`);
         console.log(`   Şifre: 123456`);
         console.log(`   Role: admin`);

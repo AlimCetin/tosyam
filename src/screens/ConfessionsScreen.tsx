@@ -16,7 +16,8 @@ import { useToast } from '../context/ToastContext';
 import { confessionService } from '../services/confessionService';
 import { adService } from '../services/adService';
 import { AdCard } from '../components/AdCard';
-import { ConfirmationModal } from '../components/ConfirmationModal';
+import { CustomActionSheet, ActionSheetOption } from '../components/CustomActionSheet';
+import { userService } from '../services/userService';
 import { Confession, Post } from '../types';
 
 export const ConfessionsScreen: React.FC = () => {
@@ -25,8 +26,9 @@ export const ConfessionsScreen: React.FC = () => {
     const [confessions, setConfessions] = useState<Confession[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-    const [reportModalVisible, setReportModalVisible] = useState(false);
+    const [isActionSheetVisible, setIsActionSheetVisible] = useState(false);
     const [reportingId, setReportingId] = useState<string | null>(null);
+    const [reportingUserId, setReportingUserId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [activeAds, setActiveAds] = useState<Post[]>([]);
@@ -35,12 +37,10 @@ export const ConfessionsScreen: React.FC = () => {
         try {
             const response = await adService.getActiveAds();
             const ads = Array.isArray(response) ? response : (response?.ads || []);
-
-            // AdCard expects Post type with some extra fields
             const formattedAds = ads.map((ad: any) => ({
                 ...ad,
                 type: 'ad',
-                adType: ad.type // type is reserved in Post for 'post'|'ad'
+                adType: ad.type
             }));
             setActiveAds(formattedAds);
         } catch (error) {
@@ -54,7 +54,7 @@ export const ConfessionsScreen: React.FC = () => {
         try {
             if (isRefreshing) {
                 setRefreshing(true);
-                loadAds(); // Refresh ads too
+                loadAds();
             }
             else setLoading(true);
 
@@ -84,16 +84,10 @@ export const ConfessionsScreen: React.FC = () => {
     );
 
     useEffect(() => {
-        // Navigation header has its own title from TabNavigator.
-        // No need to set headerRight here since user wants it inside the screen.
-    }, [navigation]);
-
-    useEffect(() => {
         loadAds();
     }, []);
 
     const handleLike = async (id: string) => {
-        // Optimistic update
         setConfessions(prev =>
             prev.map(c =>
                 c.id === id
@@ -110,25 +104,57 @@ export const ConfessionsScreen: React.FC = () => {
             await confessionService.likeConfession(id);
         } catch (error) {
             console.error('Beğeni hatası:', error);
-            // Rollback on error
             loadConfessions(1, false);
         }
     };
 
-    const handleReport = (id: string) => {
-        setReportingId(id);
-        setReportModalVisible(true);
+    const handleReport = (confession: any) => {
+        setReportingId(confession.id);
+        setReportingUserId(confession.userId);
+        setIsActionSheetVisible(true);
     };
 
-    const confirmReport = async () => {
-        if (!reportingId) return;
-        try {
-            await confessionService.reportConfession(reportingId, 'inappropriate_content');
-            showToast('Şikayetiniz başarıyla iletildi.', 'success');
-        } catch (error) {
-            showToast('Şikayet iletilemedi.', 'error');
+    const handleBlockUser = async () => {
+        if (!reportingUserId) {
+            showToast('Kullanıcı bilgisi bulunamadı', 'warning');
+            return;
         }
+
+        Alert.alert(
+            'Kullanıcıyı Engelle',
+            'Bu kullanıcıyı engellemek istediğinize emin misiniz?',
+            [
+                { text: 'İptal', style: 'cancel' },
+                {
+                    text: 'Engelle',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await userService.blockUser(reportingUserId);
+                            showToast('Kullanıcı engellendi', 'success');
+                        } catch (error: any) {
+                            showToast(error.response?.data?.message || 'Engelleme başarısız oldu', 'error');
+                        }
+                    }
+                }
+            ]
+        );
     };
+
+    const actionSheetOptions: ActionSheetOption[] = [
+        {
+            label: 'Kullanıcıyı Engelle',
+            onPress: handleBlockUser
+        },
+        {
+            label: 'Şikayet Et',
+            destructive: true,
+            onPress: () => navigation.navigate('ReportUser', {
+                reportedId: reportingId,
+                type: 'post'
+            })
+        }
+    ];
 
     const renderItem = ({ item }: { item: any }) => {
         if (item.type === 'ad') {
@@ -142,7 +168,7 @@ export const ConfessionsScreen: React.FC = () => {
                         <Icon name="person-circle-outline" size={32} color="#757575" />
                         <Text style={styles.anonymousText}>Anonim</Text>
                     </View>
-                    <TouchableOpacity onPress={() => handleReport(item.id)}>
+                    <TouchableOpacity onPress={() => handleReport(item)}>
                         <Icon name="ellipsis-horizontal" size={20} color="#757575" />
                     </TouchableOpacity>
                 </View>
@@ -225,16 +251,10 @@ export const ConfessionsScreen: React.FC = () => {
                     ) : null
                 }
             />
-
-            <ConfirmationModal
-                isVisible={reportModalVisible}
-                onClose={() => setReportModalVisible(false)}
-                onConfirm={confirmReport}
-                title="Şikayet Et"
-                message="Bu itirafı şikayet etmek istediğinizden emin misiniz?"
-                confirmText="Şikayet Et"
-                isDestructive
-                icon="warning-outline"
+            <CustomActionSheet
+                isVisible={isActionSheetVisible}
+                onClose={() => setIsActionSheetVisible(false)}
+                options={actionSheetOptions}
             />
         </SafeAreaView>
     );
@@ -245,20 +265,11 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fafafa',
     },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+    screenHeader: {
         paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#dbdbdb',
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#262626',
+        paddingVertical: 10,
+        alignItems: 'flex-end',
+        backgroundColor: '#fafafa',
     },
     createButton: {
         flexDirection: 'row',
@@ -270,12 +281,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginLeft: 4,
     },
-    screenHeader: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        alignItems: 'flex-end',
-        backgroundColor: '#fafafa',
-    },
     card: {
         backgroundColor: '#fff',
         marginHorizontal: 16,
@@ -284,12 +289,10 @@ const styles = StyleSheet.create({
         padding: 16,
         borderWidth: 1,
         borderColor: '#dbdbdb',
-        // Shadow for iOS
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        // Elevation for Android
         elevation: 2,
     },
     cardHeader: {

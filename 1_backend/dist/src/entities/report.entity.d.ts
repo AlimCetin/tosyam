@@ -3,7 +3,9 @@ export declare enum ReportType {
     USER = "user",
     POST = "post",
     COMMENT = "comment",
-    MESSAGE = "message"
+    MESSAGE = "message",
+    CAMPAIGN = "campaign",
+    PLACE = "place"
 }
 export declare enum ReportReason {
     SPAM = "spam",

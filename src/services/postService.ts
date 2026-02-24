@@ -2,8 +2,8 @@ import api from './api';
 import { Post } from '../types';
 
 export const postService = {
-  getFeed: async (page = 1, limit = 20): Promise<{ posts: Post[]; pagination: any }> => {
-    const { data } = await api.get('/posts/feed', { params: { page, limit } });
+  getFeed: async (page = 1, limit = 20, city?: string): Promise<{ posts: Post[]; pagination: any }> => {
+    const { data } = await api.get('/posts/feed', { params: { page, limit, city } });
     // Backend artık { posts: [...], pagination: {...} } formatında dönüyor
     return data.posts ? data : { posts: data, pagination: { page, limit, hasMore: false } };
   },

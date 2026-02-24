@@ -10,6 +10,7 @@ export declare class Post extends Document {
     isPrivate: boolean;
     hiddenFromFollowers: string[];
     deletedAt: Date;
+    city: string;
 }
 export declare const PostSchema: import("mongoose").Schema<Post, import("mongoose").Model<Post, any, any, any, (Document<unknown, any, Post, any, import("mongoose").DefaultSchemaOptions> & Post & Required<{
     _id: import("mongoose").Types.ObjectId;
@@ -40,6 +41,15 @@ export declare const PostSchema: import("mongoose").Schema<Post, import("mongoos
         id: string;
     }> | undefined;
     deletedAt?: import("mongoose").SchemaDefinitionProperty<Date, Post, Document<unknown, {}, Post, {
+        id: string;
+    }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Post & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    city?: import("mongoose").SchemaDefinitionProperty<string, Post, Document<unknown, {}, Post, {
         id: string;
     }, import("mongoose").ResolveSchemaOptions<import("mongoose").DefaultSchemaOptions>> & Omit<Post & Required<{
         _id: import("mongoose").Types.ObjectId;

@@ -11,6 +11,11 @@ import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Post } from '../types';
 import { SOCKET_URL } from '../constants/config';
+import { useNavigation } from '@react-navigation/native';
+import { Alert } from 'react-native';
+import { CustomActionSheet, ActionSheetOption } from './CustomActionSheet';
+import { userService } from '../services/userService';
+import { useToast } from '../context/ToastContext';
 
 interface Props {
   post: Post;
@@ -31,26 +36,26 @@ export const PostCard: React.FC<Props> = ({
   onProfilePress,
   isVisible = false,
 }) => {
+  const navigation = useNavigation<any>();
+  const { showToast } = useToast();
+  const [isActionSheetVisible, setIsActionSheetVisible] = useState(false);
   const user = post.user || { username: 'Unknown', avatar: null, fullName: 'Unknown' };
   const userId = typeof post.userId === 'string' ? post.userId : ((post.userId as any)?._id?.toString() || (post.userId as any)?.toString() || '');
 
   const [isPaused, setIsPaused] = useState(true);
-  const isFocused = useIsFocused(); // Ekranın odaklanma durumunu takip et
+  const isFocused = useIsFocused();
 
-  // Görünürlük değiştiğinde veya ekrandan çıkıldığında videoyu durdur
   useEffect(() => {
     if (!isVisible || !isFocused) {
       setIsPaused(true);
     }
   }, [isVisible, isFocused]);
 
-  // Video URL'ini çözümle (relative path ise full URL yap)
   const getVideoUrl = (url: string) => {
     if (!url) return '';
     if (url.startsWith('http') || url.startsWith('file:') || url.startsWith('content:') || url.startsWith('data:')) {
       return url;
     }
-    // Relative path ise base URL ekle
     if (url.startsWith('/')) {
       return `${SOCKET_URL}${url}`;
     }
@@ -59,8 +64,50 @@ export const PostCard: React.FC<Props> = ({
 
   const videoUrl = getVideoUrl(typeof post.video === 'string' ? post.video : '');
 
+  const handleBlockUser = async () => {
+    Alert.alert(
+      'Kullanıcıyı Engelle',
+      `${user.username || (user as any).fullName} kullanıcısını engellemek istediğinize emin misiniz?`,
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Engelle',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await userService.blockUser(userId);
+              showToast('Kullanıcı engellendi', 'success');
+            } catch (error: any) {
+              showToast(error.response?.data?.message || 'Engelleme başarısız oldu', 'error');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const actionSheetOptions: ActionSheetOption[] = [
+    {
+      label: 'Kullanıcıyı Engelle',
+      onPress: handleBlockUser
+    },
+    {
+      label: 'Şikayet Et',
+      destructive: true,
+      onPress: () => navigation.navigate('ReportUser', {
+        reportedId: post.id,
+        type: 'post'
+      })
+    }
+  ];
+
   return (
     <View style={styles.container}>
+      <CustomActionSheet
+        isVisible={isActionSheetVisible}
+        onClose={() => setIsActionSheetVisible(false)}
+        options={actionSheetOptions}
+      />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.userInfo}
@@ -70,6 +117,12 @@ export const PostCard: React.FC<Props> = ({
             style={styles.avatar}
           />
           <Text style={styles.username}>{user.username || (user as any).fullName || 'Unknown'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.moreButton}
+          onPress={() => setIsActionSheetVisible(true)}>
+          <Icon name="ellipsis-horizontal" size={20} color="#262626" />
         </TouchableOpacity>
       </View>
 
@@ -162,11 +215,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 12,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  moreButton: {
+    padding: 4,
   },
   avatar: {
     width: 32,

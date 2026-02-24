@@ -14,6 +14,7 @@ const class_validator_1 = require("class-validator");
 const ad_entity_1 = require("../../entities/ad.entity");
 class UpdateAdDto {
     title;
+    type;
     mediaUrl;
     linkUrl;
     description;
@@ -30,6 +31,11 @@ __decorate([
     (0, class_validator_1.MaxLength)(200, { message: 'Title must be at most 200 characters' }),
     __metadata("design:type", String)
 ], UpdateAdDto.prototype, "title", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(['image', 'video']),
+    __metadata("design:type", String)
+], UpdateAdDto.prototype, "type", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsUrl)({}, { message: 'Media URL must be a valid URL' }),

@@ -7,6 +7,8 @@ import { Post, PostSchema } from '../entities/post.entity';
 import { User, UserSchema } from '../entities/user.entity';
 import { Comment, CommentSchema } from '../entities/comment.entity';
 import { Message, MessageSchema } from '../entities/message.entity';
+import { Campaign, CampaignSchema } from '../entities/campaign.entity';
+import { Place, PlaceSchema } from '../entities/place.entity';
 import { ModeratorGuard } from '../common/guards/moderator.guard';
 
 @Module({
@@ -17,11 +19,13 @@ import { ModeratorGuard } from '../common/guards/moderator.guard';
       { name: User.name, schema: UserSchema },
       { name: Comment.name, schema: CommentSchema },
       { name: Message.name, schema: MessageSchema },
+      { name: 'Campaign', schema: CampaignSchema },
+      { name: 'Place', schema: PlaceSchema },
     ]),
   ],
   controllers: [ReportsController],
   providers: [ReportsService, ModeratorGuard],
   exports: [ReportsService],
 })
-export class ReportsModule {}
+export class ReportsModule { }
 

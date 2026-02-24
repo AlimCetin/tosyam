@@ -5,15 +5,21 @@ import { Comment } from '../entities/comment.entity';
 import { Notification } from '../entities/notification.entity';
 import { User } from '../entities/user.entity';
 import { Ad } from '../entities/ad.entity';
+import { Campaign } from '../entities/campaign.entity';
+import { Place } from '../entities/place.entity';
 import { RedisService } from '../common/redis/redis.service';
+import { RabbitMQService } from '../common/rabbitmq/rabbitmq.service';
 export declare class PostsService {
     private postModel;
     private commentModel;
     private notificationModel;
     private userModel;
     private adModel;
+    private campaignModel;
+    private placeModel;
     private readonly redisService;
-    constructor(postModel: Model<Post>, commentModel: Model<Comment>, notificationModel: Model<Notification>, userModel: Model<User>, adModel: Model<Ad>, redisService: RedisService);
+    private readonly rabbitmqService;
+    constructor(postModel: Model<Post>, commentModel: Model<Comment>, notificationModel: Model<Notification>, userModel: Model<User>, adModel: Model<Ad>, campaignModel: Model<Campaign>, placeModel: Model<Place>, redisService: RedisService, rabbitmqService: RabbitMQService);
     create(userId: string, image: string | undefined, caption: string, isPrivate?: boolean, hiddenFromFollowers?: string[], video?: string): Promise<import("mongoose").Document<unknown, {}, Post, {}, import("mongoose").DefaultSchemaOptions> & Post & Required<{
         _id: Types.ObjectId;
     }> & {
@@ -34,7 +40,7 @@ export declare class PostsService {
             hasMore: boolean;
         };
     }>;
-    getFeed(userId: string, page?: number, limit?: number): Promise<any>;
+    getFeed(userId: string, page?: number, limit?: number, city?: string): Promise<any>;
     invalidateFeedCache(userId: string): Promise<void>;
     getUserPosts(userId: string, currentUserId?: string, page?: number, limit?: number): Promise<{
         posts: {

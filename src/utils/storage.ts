@@ -56,8 +56,8 @@ class InMemoryStorage implements StorageInterface {
 const isRemoteDebuggerActive = (): boolean => {
   try {
     // Chrome remote debugger aktifse bu true döner
-    return typeof (global as any).__REMOTE_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined' ||
-           typeof (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined';
+    return (typeof global !== 'undefined' && (global as any).__REMOTE_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined') ||
+      (typeof (global as any).window !== 'undefined' && (global as any).window.__REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined');
   } catch {
     return false;
   }
@@ -68,31 +68,19 @@ let storage: StorageInterface;
 let usingFallback = false;
 
 try {
-  // Remote debugger kontrolü
-  if (isRemoteDebuggerActive()) {
-    console.warn('⚠️ Remote debugger aktif, in-memory storage kullanılıyor (veriler uygulama yeniden başlatıldığında kaybolur)');
-    storage = new InMemoryStorage();
-    usingFallback = true;
-  } else {
-    // MMKV instance oluştur
-    storage = new MMKV({
-      id: 'tosyam-storage',
-      encryptionKey: 'tosyam-encryption-key',
-    });
-    console.log('✅ MMKV storage başarıyla başlatıldı');
-  }
+  // MMKV instance oluştur
+  storage = new MMKV({
+    id: 'tosyam-storage',
+    encryptionKey: 'tosyam-encryption-key',
+  });
+  console.log('✅ MMKV storage başarıyla başlatıldı');
 } catch (error: any) {
   const errorMessage = error?.message || 'Unknown error';
-  
-  // MMKV hatası ve remote debugger yoksa fallback kullan
-  if (errorMessage.includes('JSI') || errorMessage.includes('on-device')) {
-    console.warn('⚠️ MMKV başlatılamadı (remote debugger?), in-memory storage kullanılıyor');
-    storage = new InMemoryStorage();
-    usingFallback = true;
-  } else {
-    console.error('❌ MMKV başlatılamadı:', error);
-    throw new Error(`MMKV storage başlatılamadı: ${errorMessage}`);
-  }
+
+  // Sadece kritik hatalarda fallback kullan
+  console.warn('⚠️ MMKV başlatılamadı, in-memory storage kullanılıyor:', errorMessage);
+  storage = new InMemoryStorage();
+  usingFallback = true;
 }
 
 export const Storage = {

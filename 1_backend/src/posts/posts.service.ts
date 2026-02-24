@@ -7,7 +7,10 @@ import { Comment } from '../entities/comment.entity';
 import { Notification } from '../entities/notification.entity';
 import { User } from '../entities/user.entity';
 import { Ad, AdStatus } from '../entities/ad.entity';
+import { Campaign } from '../entities/campaign.entity';
+import { Place } from '../entities/place.entity';
 import { RedisService } from '../common/redis/redis.service';
+import { RabbitMQService } from '../common/rabbitmq/rabbitmq.service';
 
 @Injectable()
 export class PostsService {
@@ -17,7 +20,10 @@ export class PostsService {
     @InjectModel(Notification.name) private notificationModel: Model<Notification>,
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Ad.name) private adModel: Model<Ad>,
+    @InjectModel(Campaign.name) private campaignModel: Model<Campaign>,
+    @InjectModel(Place.name) private placeModel: Model<Place>,
     private readonly redisService: RedisService,
+    private readonly rabbitmqService: RabbitMQService,
   ) { }
 
   async create(
@@ -130,7 +136,7 @@ export class PostsService {
     };
   }
 
-  async getFeed(userId: string, page: number = 1, limit: number = 20) {
+  async getFeed(userId: string, page: number = 1, limit: number = 20, city?: string) {
     // Cache key: feed:userId:page:limit
     const cacheKey = `feed:${userId}:${page}:${limit}`;
 
@@ -165,6 +171,7 @@ export class PostsService {
     const posts = await this.postModel.find({
       userId: { $in: finalFollowing },
       deletedAt: null, // Soft delete kontrolü
+      ...(city ? { $or: [{ city }, { city: { $exists: false } }] } : {}),
       $or: [
         { isHidden: false },
         { isHidden: { $exists: false } },
@@ -224,8 +231,11 @@ export class PostsService {
       };
     });
 
-    // Get active ads and insert them into feed (admin and moderator can see ads too)
+    // Get active ads, campaigns, and places to insert them into feed
     let activeAds: any[] = [];
+    let activeCampaigns: any[] = [];
+    let activePlaces: any[] = [];
+
     try {
       const now = new Date();
       activeAds = await this.adModel.find({
@@ -237,21 +247,36 @@ export class PostsService {
           { $expr: { $lt: ['$impressionCount', '$maxImpressions'] } },
         ],
       }).lean();
+
+      activeCampaigns = await this.campaignModel.find({
+        isActive: true,
+        $and: [
+          { $or: [{ startDate: { $lte: now } }, { startDate: null }] },
+          { $or: [{ endDate: { $gt: now } }, { endDate: null }] },
+        ],
+        ...(city ? { city } : {}),
+      }).lean();
+
+      activePlaces = await this.placeModel.find({
+        isActive: true,
+        ...(city ? { city } : {}),
+      }).lean();
     } catch (error) {
-      console.error('Error fetching ads:', error);
-      // Continue without ads if there's an error
+      console.error('Error fetching intertwined content:', error);
     }
 
-    // Insert ads every 5 posts (configurable)
-    const AD_INTERVAL = 5;
     const result: any[] = [];
     let adIndex = 0;
+    let campaignIndex = 0;
+    let placeIndex = 0;
 
     for (let i = 0; i < formattedPosts.length; i++) {
       result.push(formattedPosts[i]);
 
-      // Insert ad after every AD_INTERVAL posts
-      if ((i + 1) % AD_INTERVAL === 0 && activeAds.length > 0) {
+      const position = i + 1;
+
+      // Insert ad at specific intervals (e.g. 5)
+      if (position % 5 === 0 && activeAds.length > 0) {
         const ad = activeAds[adIndex % activeAds.length];
         result.push({
           id: ad._id.toString(),
@@ -264,7 +289,7 @@ export class PostsService {
           createdAt: ad.createdAt,
         });
 
-        // Record impression asynchronously (don't wait)
+        // Record impression asynchronously
         this.adModel.findByIdAndUpdate(ad._id, {
           $inc: { impressionCount: 1 },
         }).catch(err => {
@@ -272,6 +297,52 @@ export class PostsService {
         });
 
         adIndex++;
+      }
+      // Insert campaign at specific intervals (e.g. 3)
+      else if (position % 3 === 0 && activeCampaigns.length > 0) {
+        const campaign = activeCampaigns[campaignIndex % activeCampaigns.length];
+        const campaignLikes = (campaign as any).likes || [];
+        result.push({
+          _id: campaign._id.toString(),
+          id: campaign._id.toString(),
+          type: 'campaign',
+          businessName: campaign.businessName,
+          title: campaign.title,
+          description: campaign.description,
+          imageUrl: campaign.imageUrl,
+          discountRate: campaign.discountRate,
+          city: campaign.city,
+          createdAt: campaign.createdAt,
+          isActive: campaign.isActive,
+          likeCount: campaignLikes.length,
+          commentCount: campaign.commentCount || 0,
+          isLiked: campaignLikes.includes(userId),
+          hasCode: (campaign as any).hasCode ?? true,
+        });
+        campaignIndex++;
+      }
+      // Insert place at specific intervals (e.g. 4)
+      else if (position % 4 === 0 && activePlaces.length > 0) {
+        const place = activePlaces[placeIndex % activePlaces.length];
+        const placeLikes = (place as any).likes || [];
+        result.push({
+          _id: place._id.toString(),
+          id: place._id.toString(),
+          type: 'place',
+          name: place.name,
+          description: place.description,
+          imageUrl: place.imageUrl,
+          category: place.category,
+          city: place.city,
+          address: place.address,
+          entryFee: place.entryFee,
+          workingHours: place.workingHours,
+          createdAt: place.createdAt,
+          likeCount: placeLikes.length,
+          commentCount: place.commentCount || 0,
+          isLiked: placeLikes.includes(userId),
+        });
+        placeIndex++;
       }
     }
 
@@ -544,11 +615,31 @@ export class PostsService {
           postId
         });
 
-        await this.notificationModel.create({
+        const newNotification = await this.notificationModel.create({
           userId: postOwnerId,
           fromUserId: userId,
           type: 'like',
           postId: postId,
+        });
+
+        // Fetch action user data for the WebSocket payload
+        const fromUser = await this.userModel.findById(userId).select('fullName avatar').lean();
+
+        // Publish to RabbitMQ
+        await this.rabbitmqService.publish('notification.like', {
+          receiverId: postOwnerId,
+          notificationData: {
+            _id: newNotification._id,
+            type: 'like',
+            postId: postId,
+            fromUser: {
+              _id: userId,
+              fullName: fromUser?.fullName || 'User',
+              avatar: fromUser?.avatar || null,
+            },
+            createdAt: (newNotification as any).createdAt,
+            read: false,
+          }
         });
 
         // Increment notification count cache
@@ -644,11 +735,30 @@ export class PostsService {
         postId
       });
 
-      await this.notificationModel.create({
+      const newNotification = await this.notificationModel.create({
         userId: postOwnerId,
         fromUserId: userId,
         type: 'comment',
         postId: postId,
+      });
+
+      const fromUser = await this.userModel.findById(userId).select('fullName avatar').lean();
+
+      // Publish to RabbitMQ
+      await this.rabbitmqService.publish('notification.comment', {
+        receiverId: postOwnerId,
+        notificationData: {
+          _id: newNotification._id,
+          type: 'comment',
+          postId: postId,
+          fromUser: {
+            _id: userId,
+            fullName: fromUser?.fullName || 'User',
+            avatar: fromUser?.avatar || null,
+          },
+          createdAt: (newNotification as any).createdAt,
+          read: false,
+        }
       });
 
       // Increment notification count cache

@@ -176,6 +176,31 @@ let ConfessionsService = class ConfessionsService {
         });
         return { message: 'Reported successfully' };
     }
+    async findOne(id, currentUserId) {
+        const confession = await this.confessionModel.findOne({ _id: id, deletedAt: null }).lean();
+        if (!confession)
+            throw new common_1.NotFoundException('Confession not found');
+        return {
+            id: confession._id.toString(),
+            text: confession.text,
+            userId: confession.userId,
+            likeCount: confession.likes?.length || 0,
+            commentCount: confession.commentCount || 0,
+            isLiked: currentUserId ? (confession.likes || []).includes(currentUserId) : false,
+            createdAt: confession.createdAt,
+        };
+    }
+    async delete(id, userId) {
+        const confession = await this.confessionModel.findOne({ _id: id, deletedAt: null });
+        if (!confession)
+            throw new common_1.NotFoundException('Confession not found');
+        if (confession.userId !== userId) {
+            throw new common_1.ForbiddenException('You can only delete your own confessions');
+        }
+        confession.deletedAt = new Date();
+        await confession.save();
+        return { success: true };
+    }
 };
 exports.ConfessionsService = ConfessionsService;
 exports.ConfessionsService = ConfessionsService = __decorate([

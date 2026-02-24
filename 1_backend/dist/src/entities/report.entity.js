@@ -18,6 +18,8 @@ var ReportType;
     ReportType["POST"] = "post";
     ReportType["COMMENT"] = "comment";
     ReportType["MESSAGE"] = "message";
+    ReportType["CAMPAIGN"] = "campaign";
+    ReportType["PLACE"] = "place";
 })(ReportType || (exports.ReportType = ReportType = {}));
 var ReportReason;
 (function (ReportReason) {

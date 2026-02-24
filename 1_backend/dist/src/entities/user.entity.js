@@ -30,6 +30,7 @@ let User = class User extends mongoose_2.Document {
     bannedUntil;
     isPermanentlyBanned;
     deletedAt;
+    city;
 };
 exports.User = User;
 __decorate([
@@ -104,6 +105,10 @@ __decorate([
     (0, mongoose_1.Prop)({ type: Date, default: null }),
     __metadata("design:type", Object)
 ], User.prototype, "deletedAt", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: '' }),
+    __metadata("design:type", String)
+], User.prototype, "city", void 0);
 exports.User = User = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], User);

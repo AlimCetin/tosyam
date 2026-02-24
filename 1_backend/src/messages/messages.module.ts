@@ -9,6 +9,7 @@ import { Conversation, ConversationSchema } from '../entities/conversation.entit
 import { Message, MessageSchema } from '../entities/message.entity';
 import { User, UserSchema } from '../entities/user.entity';
 import { Notification, NotificationSchema } from '../entities/notification.entity';
+import { RabbitMQModule } from '../common/rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { Notification, NotificationSchema } from '../entities/notification.entit
       { name: User.name, schema: UserSchema },
       { name: Notification.name, schema: NotificationSchema },
     ]),
+    RabbitMQModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -34,5 +36,6 @@ import { Notification, NotificationSchema } from '../entities/notification.entit
   ],
   controllers: [MessagesController],
   providers: [MessagesService, MessagesGateway],
+  exports: [MessagesGateway, MessagesService],
 })
-export class MessagesModule {}
+export class MessagesModule { }

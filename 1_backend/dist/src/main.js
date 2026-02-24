@@ -45,6 +45,7 @@ const express = __importStar(require("express"));
 const app_module_1 = require("./app.module");
 const all_exceptions_filter_1 = require("./common/filters/all-exceptions.filter");
 const logger_service_1 = require("./common/logger/logger.service");
+const microservices_1 = require("@nestjs/microservices");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 async function bootstrap() {
@@ -108,6 +109,18 @@ async function bootstrap() {
     }));
     app.setGlobalPrefix('api');
     const port = configService.get('PORT', 3000);
+    const rabbitMqUrl = configService.get('RABBITMQ_URL') || 'amqp://guest:guest@localhost:5672';
+    app.connectMicroservice({
+        transport: microservices_1.Transport.RMQ,
+        options: {
+            urls: [rabbitMqUrl],
+            queue: 'notifications_queue',
+            queueOptions: {
+                durable: true,
+            },
+        },
+    });
+    await app.startAllMicroservices();
     await app.listen(port);
     logger.log(`🚀 Backend is running on: http://localhost:${port}/api`, 'Bootstrap');
     logger.log(`🔒 Security features enabled: Helmet, CORS, Rate Limiting, Validation, Winston Logging`, 'Bootstrap');

@@ -26,10 +26,25 @@ export const ReportUserScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { showToast } = useToast();
   const route = useRoute<any>();
-  const { userId } = route.params;
+  const { reportedId, type } = route.params;
   const [selectedReason, setSelectedReason] = useState('');
   const [details, setDetails] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Fallback for older calls that might still use userId
+  const finalId = reportedId || route.params.userId;
+  const finalType = type || 'user';
+
+  const getTitle = () => {
+    switch (finalType) {
+      case 'user': return 'Kullanıcıyı Şikayet Et';
+      case 'post': return 'Gönderiyi Şikayet Et';
+      case 'campaign': return 'Kampanyayı Şikayet Et';
+      case 'place': return 'Mekanı Şikayet Et';
+      case 'comment': return 'Yorumu Şikayet Et';
+      default: return 'Şikayet Et';
+    }
+  };
 
   const handleReport = async () => {
     if (!selectedReason) {
@@ -39,7 +54,7 @@ export const ReportUserScreen: React.FC = () => {
 
     try {
       setLoading(true);
-      await reportService.createReport(userId, 'user', selectedReason, details);
+      await reportService.createReport(finalId, finalType, selectedReason, details);
       showToast('Şikayetiniz başarıyla iletildi', 'success');
       navigation.goBack();
     } catch (error: any) {
@@ -51,9 +66,9 @@ export const ReportUserScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Kullanıcıyı Şikayet Et</Text>
+      <Text style={styles.title}>{getTitle()}</Text>
       <Text style={styles.description}>
-        Bu kullanıcıyı neden şikayet ediyorsunuz?
+        Bu içeriği neden şikayet ediyorsunuz?
       </Text>
 
       {REPORT_REASONS.map((reason) => (

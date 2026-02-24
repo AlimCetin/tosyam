@@ -6,6 +6,8 @@ export enum ReportType {
   POST = 'post',
   COMMENT = 'comment',
   MESSAGE = 'message',
+  CAMPAIGN = 'campaign',
+  PLACE = 'place',
 }
 
 export enum ReportReason {

@@ -23,6 +23,7 @@ let Post = class Post extends mongoose_2.Document {
     isPrivate;
     hiddenFromFollowers;
     deletedAt;
+    city;
 };
 exports.Post = Post;
 __decorate([
@@ -65,6 +66,10 @@ __decorate([
     (0, mongoose_1.Prop)({ default: null }),
     __metadata("design:type", Date)
 ], Post.prototype, "deletedAt", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: '' }),
+    __metadata("design:type", String)
+], Post.prototype, "city", void 0);
 exports.Post = Post = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Post);

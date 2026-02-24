@@ -20,6 +20,8 @@ import { messageService } from '../services/messageService';
 import { Message } from '../types';
 import { authService } from '../services/authService';
 import { SOCKET_URL } from '../constants/config';
+import { Storage as AppStorage } from '../utils/storage';
+import { DeviceEventEmitter } from 'react-native';
 import io from 'socket.io-client';
 
 export const ChatScreen: React.FC = () => {
@@ -90,10 +92,31 @@ export const ChatScreen: React.FC = () => {
   }, []);
 
   const initSocket = () => {
-    socketRef.current = io(SOCKET_URL);
+    const token = AppStorage.getString('token');
+    socketRef.current = io(SOCKET_URL, {
+      auth: { token },
+      transports: ['websocket'],
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('💬 Chat Socket Connected');
+    });
+
+    socketRef.current.on('connect_error', async (err: any) => {
+      console.log('❌ Chat Socket Connection Error:', err.message);
+      if (err.message === 'jwt expired') {
+        const refreshed = await authService.refreshToken();
+        if (refreshed) {
+          const newToken = AppStorage.getString('token');
+          if (newToken) {
+            DeviceEventEmitter.emit('token-refreshed', { token: newToken });
+          }
+        }
+      }
+    });
+
     socketRef.current.on('newMessage', (message: Message) => {
       setMessages((prev) => {
-        // Mesaj zaten varsa ekleme
         const exists = prev.some((m) => m.id === message.id || m._id === message._id);
         if (exists) return prev;
         return [...prev, message];
@@ -103,6 +126,20 @@ export const ChatScreen: React.FC = () => {
       }, 100);
     });
   };
+
+  useEffect(() => {
+    const tokenListener = DeviceEventEmitter.addListener('token-refreshed', () => {
+      console.log('🔄 Chat Socket: Token yenilendi, yeniden bağlanılıyor...');
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+      initSocket();
+    });
+
+    return () => {
+      tokenListener.remove();
+    };
+  }, []);
 
   const findOrCreateConversation = async () => {
     try {

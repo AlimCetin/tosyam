@@ -18,6 +18,7 @@ const conversation_entity_1 = require("../entities/conversation.entity");
 const message_entity_1 = require("../entities/message.entity");
 const user_entity_1 = require("../entities/user.entity");
 const notification_entity_1 = require("../entities/notification.entity");
+const rabbitmq_module_1 = require("../common/rabbitmq/rabbitmq.module");
 let MessagesModule = class MessagesModule {
 };
 exports.MessagesModule = MessagesModule;
@@ -30,6 +31,7 @@ exports.MessagesModule = MessagesModule = __decorate([
                 { name: user_entity_1.User.name, schema: user_entity_1.UserSchema },
                 { name: notification_entity_1.Notification.name, schema: notification_entity_1.NotificationSchema },
             ]),
+            rabbitmq_module_1.RabbitMQModule,
             jwt_1.JwtModule.registerAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
@@ -46,6 +48,7 @@ exports.MessagesModule = MessagesModule = __decorate([
         ],
         controllers: [messages_controller_1.MessagesController],
         providers: [messages_service_1.MessagesService, messages_gateway_1.MessagesGateway],
+        exports: [messages_gateway_1.MessagesGateway, messages_service_1.MessagesService],
     })
 ], MessagesModule);
 //# sourceMappingURL=messages.module.js.map

@@ -83,8 +83,9 @@ export class PostsController {
     @CurrentUser() user: User,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('city') city?: string,
   ) {
-    return this.postsService.getFeed(user._id.toString(), page, limit);
+    return this.postsService.getFeed(user._id.toString(), page, limit, city);
   }
 
   @Get('user/:userId')

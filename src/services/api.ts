@@ -3,6 +3,7 @@ import { Storage } from '../utils/storage';
 import { API_BASE_URL } from '../constants/config';
 import { reset } from '../navigation/navigationRef';
 import { authService } from './authService';
+import { DeviceEventEmitter } from 'react-native';
 
 // Extended AxiosRequestConfig to include _retry flag
 interface ExtendedAxiosRequestConfig extends AxiosRequestConfig {
@@ -110,7 +111,9 @@ api.interceptors.response.use(
             failedQueue.push({ resolve, reject });
           })
             .then(token => {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+              }
               return api(originalRequest);
             })
             .catch(err => {
@@ -128,8 +131,14 @@ api.interceptors.response.use(
           if (refreshed) {
             const newToken = Storage.getString('token');
             processQueue(null, newToken);
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            }
             isRefreshing = false;
+
+            // WebSocket gibi diğer kısımların token'ın yenilendiğini anlaması için event fırlat
+            DeviceEventEmitter.emit('token-refreshed', { token: newToken });
+
             return api(originalRequest);
           } else {
             throw new Error('Token refresh failed');
@@ -152,6 +161,8 @@ api.interceptors.response.use(
         Status: 'No Response',
         Error: error.message,
       });
+      // API isteğine cevap gelmediği durumlarda uygulamayı kapatma olayını tetikle
+      DeviceEventEmitter.emit('backend-connection-lost');
     } else {
       // İstek hazırlanırken hata oluştu
       console.error('❌ REQUEST ERROR:', error.message);

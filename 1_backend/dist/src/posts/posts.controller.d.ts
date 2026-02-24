@@ -30,7 +30,7 @@ export declare class PostsController {
             hasMore: boolean;
         };
     }>;
-    getFeed(user: User, page: number, limit: number): Promise<any>;
+    getFeed(user: User, page: number, limit: number, city?: string): Promise<any>;
     getUserPosts(userId: string, user: User, page: number, limit: number): Promise<{
         posts: {
             id: any;

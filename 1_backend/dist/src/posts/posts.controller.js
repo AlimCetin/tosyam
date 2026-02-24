@@ -57,8 +57,8 @@ let PostsController = class PostsController {
         }
         return this.postsService.getLikes(postId, user._id.toString(), page, limit);
     }
-    async getFeed(user, page, limit) {
-        return this.postsService.getFeed(user._id.toString(), page, limit);
+    async getFeed(user, page, limit, city) {
+        return this.postsService.getFeed(user._id.toString(), page, limit, city);
     }
     async getUserPosts(userId, user, page, limit) {
         if (userId === 'current-user-id' || userId === 'me') {
@@ -159,8 +159,9 @@ __decorate([
     __param(0, (0, user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('page', new common_1.DefaultValuePipe(1), common_1.ParseIntPipe)),
     __param(2, (0, common_1.Query)('limit', new common_1.DefaultValuePipe(20), common_1.ParseIntPipe)),
+    __param(3, (0, common_1.Query)('city')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [user_entity_1.User, Number, Number]),
+    __metadata("design:paramtypes", [user_entity_1.User, Number, Number, String]),
     __metadata("design:returntype", Promise)
 ], PostsController.prototype, "getFeed", null);
 __decorate([

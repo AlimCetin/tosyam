@@ -16,6 +16,8 @@ const post_entity_1 = require("../entities/post.entity");
 const user_entity_1 = require("../entities/user.entity");
 const comment_entity_1 = require("../entities/comment.entity");
 const message_entity_1 = require("../entities/message.entity");
+const campaign_entity_1 = require("../entities/campaign.entity");
+const place_entity_1 = require("../entities/place.entity");
 const moderator_guard_1 = require("../common/guards/moderator.guard");
 let ReportsModule = class ReportsModule {
 };
@@ -29,6 +31,8 @@ exports.ReportsModule = ReportsModule = __decorate([
                 { name: user_entity_1.User.name, schema: user_entity_1.UserSchema },
                 { name: comment_entity_1.Comment.name, schema: comment_entity_1.CommentSchema },
                 { name: message_entity_1.Message.name, schema: message_entity_1.MessageSchema },
+                { name: 'Campaign', schema: campaign_entity_1.CampaignSchema },
+                { name: 'Place', schema: place_entity_1.PlaceSchema },
             ]),
         ],
         controllers: [reports_controller_1.ReportsController],

@@ -39,10 +39,10 @@ export class User extends Document {
   @Prop({ type: [{ type: String, ref: 'User' }], default: [] })
   hiddenFollowing: string[];
 
-  @Prop({ 
-    type: String, 
-    enum: ['user', 'moderator', 'admin', 'super_admin'], 
-    default: 'user' 
+  @Prop({
+    type: String,
+    enum: ['user', 'moderator', 'admin', 'super_admin'],
+    default: 'user'
   })
   role: string;
 
@@ -57,6 +57,9 @@ export class User extends Document {
 
   @Prop({ type: Date, default: null })
   deletedAt: Date | null;
+
+  @Prop({ default: '' })
+  city: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

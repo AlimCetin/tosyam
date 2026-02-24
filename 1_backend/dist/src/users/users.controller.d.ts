@@ -54,6 +54,7 @@ export declare class UsersController {
         bannedUntil: Date | null;
         isPermanentlyBanned: boolean;
         deletedAt: Date | null;
+        city: string;
         _id: Types.ObjectId;
         $locals: Record<string, unknown>;
         $op: "save" | "validate" | "remove" | null;

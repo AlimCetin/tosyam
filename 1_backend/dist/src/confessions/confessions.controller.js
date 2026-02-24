@@ -42,6 +42,12 @@ let ConfessionsController = class ConfessionsController {
     async report(req, id, reason) {
         return this.confessionsService.report(id, req.user.id, reason);
     }
+    async findOne(req, id) {
+        return this.confessionsService.findOne(id, req.user.id);
+    }
+    async delete(req, id) {
+        return this.confessionsService.delete(id, req.user.id);
+    }
 };
 exports.ConfessionsController = ConfessionsController;
 __decorate([
@@ -105,6 +111,22 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], ConfessionsController.prototype, "report", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], ConfessionsController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], ConfessionsController.prototype, "delete", null);
 exports.ConfessionsController = ConfessionsController = __decorate([
     (0, common_1.Controller)('confessions'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),

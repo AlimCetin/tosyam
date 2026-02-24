@@ -5,6 +5,7 @@ import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
 import { Notification } from '../entities/notification.entity';
 import { RedisService } from '../common/redis/redis.service';
+import { RabbitMQService } from '../common/rabbitmq/rabbitmq.service';
 
 @Injectable()
 export class MessagesService {
@@ -13,13 +14,14 @@ export class MessagesService {
     @InjectModel(Message.name) private messageModel: Model<Message>,
     @InjectModel(Notification.name) private notificationModel: Model<Notification>,
     private readonly redisService: RedisService,
-  ) {}
+    private readonly rabbitmqService: RabbitMQService,
+  ) { }
 
   async getConversations(userId: string, page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
     const maxLimit = Math.min(limit, 50);
-    
-    const conversations = await this.conversationModel.find({ 
+
+    const conversations = await this.conversationModel.find({
       participants: userId,
       deletedAt: null, // Soft delete kontrolü
     })
@@ -37,14 +39,14 @@ export class MessagesService {
       .skip(skip)
       .limit(maxLimit)
       .lean();
-    
+
     // Tüm conversation ID'lerini topla
     const conversationIds = conversations.map((conv: any) => conv._id.toString());
-    
+
     // Tüm conversation'lar için okunmamış mesaj sayılarını toplu olarak hesapla (performans için)
     // userId'yi string'e çevir (karşılaştırma için)
     const userIdStr = String(userId).trim();
-    
+
     const unreadCountsResult = await this.messageModel.aggregate([
       {
         $match: {
@@ -70,24 +72,24 @@ export class MessagesService {
         },
       },
     ]);
-    
+
     // Conversation ID'ye göre unread count map'i oluştur
     const unreadCountsMap: Record<string, number> = {};
     unreadCountsResult.forEach((item: any) => {
       unreadCountsMap[item._id] = item.count || 0;
     });
-    
+
     // Participants'ı filtrele ve formatla
     const filteredConversations = conversations
       .map((conv: any) => {
         // Participants'ı filtrele (null olanları çıkar)
         const validParticipants = (conv.participants || []).filter((p: any) => p !== null);
-        
+
         // Eğer geçerli participant yoksa bu conversation'ı atla
         if (validParticipants.length === 0) {
           return null;
         }
-        
+
         // Participants'ı formatla
         const formattedParticipants = validParticipants.map((p: any) => ({
           id: p._id?.toString() || p.toString(),
@@ -95,7 +97,7 @@ export class MessagesService {
           username: p.fullName || '',
           avatar: p.avatar || null,
         }));
-        
+
         // LastMessage'ı formatla
         let formattedLastMessage: any = null;
         if (conv.lastMessage && conv.lastMessage !== null) {
@@ -105,10 +107,10 @@ export class MessagesService {
             createdAt: conv.lastMessage.createdAt || conv.lastMessageAt,
           };
         }
-        
+
         // Okunmamış mesaj sayısını map'ten al
         const unreadCount = unreadCountsMap[conv._id.toString()] || 0;
-        
+
         return {
           id: conv._id.toString(),
           participants: formattedParticipants,
@@ -120,7 +122,7 @@ export class MessagesService {
         };
       })
       .filter((conv: any) => conv !== null);
-    
+
     return {
       conversations: filteredConversations,
       pagination: {
@@ -132,19 +134,19 @@ export class MessagesService {
   }
 
   async getMessages(conversationId: string, userId: string, page: number = 1, limit: number = 20) {
-    const conversation = await this.conversationModel.findOne({ 
+    const conversation = await this.conversationModel.findOne({
       _id: conversationId,
       deletedAt: null, // Soft delete kontrolü
     }).lean();
-    
+
     if (!conversation || !conversation.participants.includes(userId)) {
       throw new NotFoundException('Conversation not found');
     }
-    
+
     const skip = (page - 1) * limit;
     const maxLimit = Math.min(limit, 50);
-    
-    const messages = await this.messageModel.find({ 
+
+    const messages = await this.messageModel.find({
       conversationId,
       deletedAt: null, // Soft delete kontrolü
     })
@@ -158,7 +160,7 @@ export class MessagesService {
       .skip(skip)
       .limit(maxLimit)
       .lean();
-    
+
     // SenderId null olan mesajları filtrele ve formatla
     const validMessages = messages
       .filter((msg: any) => msg.senderId !== null)
@@ -180,7 +182,7 @@ export class MessagesService {
           },
         };
       });
-    
+
     return {
       messages: validMessages,
       pagination: {
@@ -215,12 +217,12 @@ export class MessagesService {
     );
 
     // Mesaj bildirimi oluştur
-    console.log('📬 Mesaj bildirimi oluşturuluyor:', { 
-      receiverId, 
+    console.log('📬 Mesaj bildirimi oluşturuluyor:', {
+      receiverId,
       fromUserId: senderId,
       conversationId: conversation._id.toString()
     });
-    
+
     await this.notificationModel.create({
       userId: receiverId,
       fromUserId: senderId,
@@ -244,9 +246,8 @@ export class MessagesService {
     const populatedMessage = await message.populate('senderId', 'email fullName avatar');
     const msgObj = populatedMessage.toObject() as any;
     const sender = msgObj.senderId as any;
-    
-    // conversationId'yi response'a ekle ve senderId'yi string'e çevir
-    return {
+
+    const messagePayload = {
       id: msgObj._id.toString(),
       conversationId: conversation._id.toString(),
       senderId: sender?._id?.toString() || sender?.toString() || senderId,
@@ -261,40 +262,49 @@ export class MessagesService {
         avatar: sender?.avatar || null,
       },
     };
+
+    // Publish event to RabbitMQ
+    await this.rabbitmqService.publish('notification.message', {
+      receiverId,
+      messageData: messagePayload,
+    });
+
+    // conversationId'yi response'a ekle ve senderId'yi string'e çevir
+    return messagePayload;
   }
 
   async markAsRead(conversationId: string, userId: string) {
     // userId'yi string'e çevir
     const userIdStr = String(userId).trim();
-    
+
     // Önce okunmamış mesajları bul (kullanıcının göndermediği)
     const unreadMessages = await this.messageModel.find({
       conversationId,
       read: false,
       deletedAt: null,
     }).select('senderId').lean();
-    
+
     // Kullanıcının göndermediği mesajları filtrele
     const messagesToMark = unreadMessages.filter((msg: any) => {
       const senderIdStr = String(msg.senderId).trim();
       return senderIdStr !== userIdStr;
     });
-    
+
     if (messagesToMark.length === 0) {
       return { modifiedCount: 0 };
     }
-    
+
     const messageIds = messagesToMark.map((msg: any) => msg._id);
-    
+
     // Sadece bu mesajları okundu işaretle
     const result = await this.messageModel.updateMany(
-      { 
+      {
         _id: { $in: messageIds },
         read: false,
       },
       { read: true },
     );
-    
+
     console.log('✅ Mesajlar okundu işaretlendi:', {
       conversationId,
       userId,
@@ -303,7 +313,7 @@ export class MessagesService {
 
     // Invalidate message unread count cache
     await this.redisService.del(`messages:unread:${userId}`);
-    
+
     return { modifiedCount: result.modifiedCount };
   }
 
@@ -318,14 +328,14 @@ export class MessagesService {
 
     // Okunmamış mesajı olan conversation sayısını hesapla (kaç kişiden mesaj var)
     const userIdStr = String(userId).trim();
-    
+
     const conversations = await this.conversationModel.find({
       participants: userIdStr,
       deletedAt: null,
     }).select('_id').lean();
 
     const conversationIds = conversations.map((c: any) => c._id.toString());
-    
+
     if (conversationIds.length === 0) {
       await this.redisService.set(cacheKey, '0', 60);
       return 0;
@@ -337,10 +347,10 @@ export class MessagesService {
       read: false,
       deletedAt: null,
     }).select('conversationId senderId').lean();
-    
+
     // Kullanıcının göndermediği mesajları filtrele ve unique conversation'ları bul
     const conversationsWithUnread = new Set<string>();
-    
+
     unreadMessages.forEach((msg: any) => {
       const senderIdStr = String(msg.senderId).trim();
       if (senderIdStr !== userIdStr) {

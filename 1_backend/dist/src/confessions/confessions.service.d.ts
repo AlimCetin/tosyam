@@ -54,4 +54,16 @@ export declare class ConfessionsService {
     report(confessionId: string, reporterId: string, reason: string): Promise<{
         message: string;
     }>;
+    findOne(id: string, currentUserId?: string): Promise<{
+        id: string;
+        text: string;
+        userId: string;
+        likeCount: number;
+        commentCount: number;
+        isLiked: boolean;
+        createdAt: any;
+    }>;
+    delete(id: string, userId: string): Promise<{
+        success: boolean;
+    }>;
 }

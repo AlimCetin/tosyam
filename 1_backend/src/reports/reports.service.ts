@@ -13,7 +13,9 @@ export class ReportsService {
     @InjectModel('User') private userModel: Model<any>,
     @InjectModel('Comment') private commentModel: Model<any>,
     @InjectModel('Message') private messageModel: Model<any>,
-  ) {}
+    @InjectModel('Campaign') private campaignModel: Model<any>,
+    @InjectModel('Place') private placeModel: Model<any>,
+  ) { }
 
   async create(userId: string, createReportDto: CreateReportDto) {
     // Check if user is reporting themselves
@@ -89,7 +91,7 @@ export class ReportsService {
         const reporterIdPopulated = report.reporterId && typeof report.reporterId === 'object'
           ? ((report.reporterId as any)._id || report.reporterId)?.toString()
           : report.reporterId?.toString();
-        
+
         const reviewedByPopulated = report.reviewedBy && typeof report.reviewedBy === 'object'
           ? ((report.reviewedBy as any)._id || report.reviewedBy)?.toString()
           : report.reviewedBy?.toString() || null;
@@ -184,15 +186,35 @@ export class ReportsService {
             conversationId: (message.conversationId && typeof message.conversationId === 'object' ? (message.conversationId._id || message.conversationId) : message.conversationId)?.toString(),
           };
         }
+      } else if (report.type === ReportType.CAMPAIGN) {
+        const campaign: any = await this.campaignModel.findById(report.reportedId).lean();
+        if (campaign) {
+          reportedItem = {
+            id: campaign._id.toString(),
+            title: campaign.title,
+            imageUrl: campaign.imageUrl,
+            businessName: campaign.businessName,
+          };
+        }
+      } else if (report.type === ReportType.PLACE) {
+        const place: any = await this.placeModel.findById(report.reportedId).lean();
+        if (place) {
+          reportedItem = {
+            id: place._id.toString(),
+            name: place.name,
+            imageUrl: place.imageUrl,
+            city: place.city,
+          };
+        }
       }
     } catch (error) {
       // Item might be deleted
     }
 
-    const reporterIdPopulated = report.reporterId && typeof report.reporterId === 'object' 
+    const reporterIdPopulated = report.reporterId && typeof report.reporterId === 'object'
       ? ((report.reporterId as any)._id || report.reporterId)?.toString()
       : report.reporterId?.toString();
-    
+
     const reviewedByPopulated = report.reviewedBy && typeof report.reviewedBy === 'object'
       ? ((report.reviewedBy as any)._id || report.reviewedBy)?.toString()
       : report.reviewedBy?.toString() || null;
@@ -308,6 +330,16 @@ export class ReportsService {
       const message = await this.messageModel.findById(reportedId);
       if (!message) {
         throw new NotFoundException('Message not found');
+      }
+    } else if (type === ReportType.CAMPAIGN) {
+      const campaign = await this.campaignModel.findById(reportedId);
+      if (!campaign) {
+        throw new NotFoundException('Campaign not found');
+      }
+    } else if (type === ReportType.PLACE) {
+      const place = await this.placeModel.findById(reportedId);
+      if (!place) {
+        throw new NotFoundException('Place not found');
       }
     }
   }

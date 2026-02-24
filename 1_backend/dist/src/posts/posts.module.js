@@ -16,7 +16,10 @@ const comment_entity_1 = require("../entities/comment.entity");
 const notification_entity_1 = require("../entities/notification.entity");
 const user_entity_1 = require("../entities/user.entity");
 const ad_entity_1 = require("../entities/ad.entity");
+const campaign_entity_1 = require("../entities/campaign.entity");
+const place_entity_1 = require("../entities/place.entity");
 const not_blocked_guard_1 = require("../common/guards/not-blocked.guard");
+const rabbitmq_module_1 = require("../common/rabbitmq/rabbitmq.module");
 let PostsModule = class PostsModule {
 };
 exports.PostsModule = PostsModule;
@@ -29,7 +32,10 @@ exports.PostsModule = PostsModule = __decorate([
                 { name: notification_entity_1.Notification.name, schema: notification_entity_1.NotificationSchema },
                 { name: user_entity_1.User.name, schema: user_entity_1.UserSchema },
                 { name: ad_entity_1.Ad.name, schema: ad_entity_1.AdSchema },
+                { name: campaign_entity_1.Campaign.name, schema: campaign_entity_1.CampaignSchema },
+                { name: place_entity_1.Place.name, schema: place_entity_1.PlaceSchema },
             ]),
+            rabbitmq_module_1.RabbitMQModule,
         ],
         controllers: [posts_controller_1.PostsController],
         providers: [posts_service_1.PostsService, not_blocked_guard_1.NotBlockedGuard],

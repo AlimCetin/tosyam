@@ -12,6 +12,8 @@ import { Report, ReportSchema, ReportType, ReportReason, ReportStatus, ReportPri
 import { Ad, AdSchema, AdType, AdStatus } from './src/entities/ad.entity';
 import { ActivityLog, ActivityLogSchema, ActivityType } from './src/entities/activity-log.entity';
 import { Appeal, AppealSchema, AppealStatus } from './src/entities/appeal.entity';
+import { Campaign, CampaignSchema } from './src/entities/campaign.entity';
+import { Place, PlaceSchema } from './src/entities/place.entity';
 import * as bcrypt from 'bcryptjs';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tosyam';
@@ -28,6 +30,8 @@ const ReportModel = mongoose.models[Report.name] || mongoose.model(Report.name, 
 const AdModel = mongoose.models[Ad.name] || mongoose.model(Ad.name, AdSchema);
 const ActivityLogModel = mongoose.models[ActivityLog.name] || mongoose.model(ActivityLog.name, ActivityLogSchema);
 const AppealModel = mongoose.models[Appeal.name] || mongoose.model(Appeal.name, AppealSchema);
+const CampaignModel = mongoose.models[Campaign.name] || mongoose.model(Campaign.name, CampaignSchema);
+const PlaceModel = mongoose.models[Place.name] || mongoose.model(Place.name, PlaceSchema);
 
 // Yardımcı fonksiyonlar
 function getRandomElement<T>(array: T[]): T {
@@ -184,6 +188,8 @@ async function seed() {
     await ConversationModel.deleteMany({});
     await MessageModel.deleteMany({});
     await NotificationModel.deleteMany({});
+    await CampaignModel.deleteMany({});
+    await PlaceModel.deleteMany({});
     console.log('Veriler temizlendi!');
 
     // Eski index'leri temizle (username ve email index'leri varsa)
@@ -215,7 +221,7 @@ async function seed() {
 
     // Kullanıcılar oluştur (50 kullanıcı)
     console.log('Kullanıcılar oluşturuluyor...');
-    
+
     const userData = [
       { fullName: 'Ahmet Yılmaz', email: 'ali@a.com' },
       { fullName: 'Ayşe Demir', email: 'ali1@a.com' },
@@ -277,7 +283,7 @@ async function seed() {
       // İlk kullanıcıyı (Ahmet Yılmaz, ali@a.com) admin yap
       const isAdmin = i === 0;
       const role = isAdmin ? 'admin' : (i === 1 ? 'moderator' : 'user');
-      
+
       const user = await UserModel.create({
         fullName: userData[i].fullName,
         avatar: `https://i.pravatar.cc/150?img=${i + 1}`,
@@ -345,6 +351,7 @@ async function seed() {
         caption: getRandomElement(captions),
         likes: likers.map(u => u._id.toString()),
         commentCount: 0,
+        city: 'Kastamonu - Tosya',
       });
     }
     const insertedPosts = await PostModel.insertMany(posts);
@@ -386,7 +393,7 @@ async function seed() {
     while (conversations.length < 60) {
       const user1 = getRandomElement(users);
       const user2 = getRandomElement(users.filter(u => u._id.toString() !== user1._id.toString()));
-      
+
       const pairKey = [user1._id.toString(), user2._id.toString()].sort().join('-');
       if (!conversationPairs.has(pairKey)) {
         conversationPairs.add(pairKey);
@@ -417,15 +424,15 @@ async function seed() {
       const [user1Id, user2Id] = conv.participants;
       const baseTime = new Date();
       baseTime.setDate(baseTime.getDate() - getRandomInt(1, 30)); // Son 30 gün içinde
-      
+
       for (let i = 0; i < messageCount; i++) {
         const senderId = Math.random() > 0.5 ? user1Id : user2Id;
         const receiverId = senderId === user1Id ? user2Id : user1Id;
-        
+
         // Zaman sırasına göre mesaj oluştur (her mesaj bir sonrakinden önce)
         const messageTime = new Date(baseTime);
         messageTime.setMinutes(messageTime.getMinutes() + i * getRandomInt(5, 60));
-        
+
         const messageData = {
           conversationId: conv._id.toString(),
           senderId: senderId,
@@ -433,9 +440,9 @@ async function seed() {
           read: Math.random() > 0.4,
           createdAt: messageTime,
         };
-        
+
         messagesByConv[conv._id.toString()].push(messageData);
-        
+
         // Her mesaj için alıcıya bildirim oluştur (son 10 mesaj için)
         if (i >= messageCount - 10) {
           messageNotifications.push({
@@ -510,7 +517,7 @@ async function seed() {
       for (let i = 0; i < messageCount; i++) {
         const messageTime = new Date(baseTime);
         messageTime.setMinutes(messageTime.getMinutes() + i * getRandomInt(10, 120));
-        
+
         const messageText = getRandomElement(messageTexts);
         const aliMessageData = {
           conversationId: aliConv._id.toString(),
@@ -536,7 +543,7 @@ async function seed() {
     // Ali'nin mesajlarını ekle
     if (aliMessages.length > 0) {
       const insertedAliMessages = await MessageModel.insertMany(aliMessages);
-      
+
       // Ali'nin conversation'larının lastMessage'larını güncelle
       for (const aliConv of aliConversations) {
         const convMessages = insertedAliMessages.filter(m => m.conversationId === aliConv._id.toString());
@@ -560,7 +567,7 @@ async function seed() {
       }
 
       console.log(`✅ Ali'ye ${aliMessages.length} mesaj eklendi (${sendersToAli.length} farklı kişiden)`);
-      
+
       // Ali'nin bildirimlerini ekle
       if (aliNotifications.length > 0) {
         await NotificationModel.insertMany(aliNotifications);
@@ -577,7 +584,7 @@ async function seed() {
     for (const post of insertedPosts) {
       const postOwnerId = post.userId.toString();
       const likers = post.likes || [];
-      
+
       // Her like için post sahibine bildirim oluştur (kendisi beğenmediyse)
       for (const likerId of likers) {
         if (likerId !== postOwnerId) {
@@ -600,10 +607,10 @@ async function seed() {
     for (const comment of insertedComments) {
       const commenterId = comment.userId.toString();
       const post = insertedPosts.find(p => p._id.toString() === comment.postId);
-      
+
       if (post) {
         const postOwnerId = post.userId.toString();
-        
+
         // Comment yapan kişi post sahibi değilse bildirim oluştur
         if (commenterId !== postOwnerId) {
           notifications.push({
@@ -625,7 +632,7 @@ async function seed() {
     let followNotificationCount = 0;
     for (const user of users) {
       const followers = user.followers || [];
-      
+
       // Her follower için bildirim oluştur (son 50 takipçi için)
       const recentFollowers = followers.slice(-50);
       for (const followerId of recentFollowers) {
@@ -655,20 +662,20 @@ async function seed() {
     const adminUser = users[0]; // Admin kullanıcı
     const moderatorUser = users[1]; // Moderator kullanıcı
     const reports: any[] = [];
-    
+
     // Post report'ları (30 adet)
     for (let i = 0; i < 30; i++) {
       const randomPost = getRandomElement(insertedPosts);
       const reporter = getRandomElement(users.filter(u => u._id.toString() !== randomPost.userId.toString()));
       const reportCount = getRandomInt(1, 8);
-      
+
       let priority = ReportPriority.MEDIUM;
       if (reportCount >= 5) priority = ReportPriority.HIGH;
       if (reportCount >= 8) priority = ReportPriority.URGENT;
-      
+
       const statuses = [ReportStatus.PENDING, ReportStatus.IN_REVIEW, ReportStatus.RESOLVED, ReportStatus.REJECTED];
       const status = i < 10 ? ReportStatus.PENDING : (i < 20 ? ReportStatus.IN_REVIEW : getRandomElement(statuses));
-      
+
       reports.push({
         reporterId: reporter._id.toString(),
         reportedId: randomPost._id.toString(),
@@ -690,12 +697,12 @@ async function seed() {
         createdAt: new Date(Date.now() - getRandomInt(1, 60) * 24 * 60 * 60 * 1000),
       });
     }
-    
+
     // User report'ları (20 adet)
     for (let i = 0; i < 20; i++) {
       const reportedUser = getRandomElement(users.slice(2)); // İlk 2 kullanıcıyı (admin/moderator) hariç tut
       const reporter = getRandomElement(users.filter(u => u._id.toString() !== reportedUser._id.toString()));
-      
+
       reports.push({
         reporterId: reporter._id.toString(),
         reportedId: reportedUser._id.toString(),
@@ -717,7 +724,7 @@ async function seed() {
         createdAt: new Date(Date.now() - getRandomInt(1, 45) * 24 * 60 * 60 * 1000),
       });
     }
-    
+
     const insertedReports = await ReportModel.insertMany(reports);
     console.log(`✅ ${insertedReports.length} report oluşturuldu!`);
 
@@ -736,20 +743,20 @@ async function seed() {
       'Sınırlı Süre',
       'Özel Teklif',
     ];
-    
+
     for (let i = 0; i < 10; i++) {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - getRandomInt(0, 10));
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + getRandomInt(30, 90));
-      
+
       const isActive = i < 5; // İlk 5'i aktif
       const adType = i % 2 === 0 ? AdType.IMAGE : AdType.VIDEO;
-      
+
       ads.push({
         title: adTitles[i],
         type: adType,
-        mediaUrl: adType === AdType.IMAGE 
+        mediaUrl: adType === AdType.IMAGE
           ? `https://picsum.photos/800/600?random=${i + 1000}`
           : `https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4`,
         linkUrl: `https://example.com/campaign/${i + 1}`,
@@ -767,20 +774,20 @@ async function seed() {
         createdAt: new Date(Date.now() - getRandomInt(1, 30) * 24 * 60 * 60 * 1000),
       });
     }
-    
+
     const insertedAds = await AdModel.insertMany(ads);
     console.log(`✅ ${insertedAds.length} reklam oluşturuldu!`);
 
     // ActivityLog'lar oluştur (admin işlemleri)
     console.log('\nActivity Log\'lar oluşturuluyor...');
     const activityLogs: any[] = [];
-    
+
     // Ban işlemleri (10 adet)
     const bannedUsers = users.slice(5, 15); // 5-15 arası kullanıcılar banlı olsun
     for (let i = 0; i < 10; i++) {
       const targetUser = bannedUsers[i];
       const isPermanent = i % 3 === 0;
-      
+
       activityLogs.push({
         adminId: adminUser._id.toString(),
         activityType: ActivityType.USER_BANNED,
@@ -793,7 +800,7 @@ async function seed() {
         },
         createdAt: new Date(Date.now() - getRandomInt(1, 30) * 24 * 60 * 60 * 1000),
       });
-      
+
       // Ban işlemini kullanıcıya da uygula
       await UserModel.updateOne(
         { _id: targetUser._id },
@@ -805,13 +812,13 @@ async function seed() {
         }
       );
     }
-    
+
     // Warning işlemleri (15 adet)
     const warnedUsers = users.slice(15, 30);
     for (let i = 0; i < 15; i++) {
       const targetUser = warnedUsers[i];
       const warningCount = getRandomInt(1, 3);
-      
+
       activityLogs.push({
         adminId: i % 2 === 0 ? adminUser._id.toString() : moderatorUser._id.toString(),
         activityType: ActivityType.USER_WARNED,
@@ -823,19 +830,19 @@ async function seed() {
         },
         createdAt: new Date(Date.now() - getRandomInt(1, 45) * 24 * 60 * 60 * 1000),
       });
-      
+
       // Warning'i kullanıcıya da uygula
       await UserModel.updateOne(
         { _id: targetUser._id },
         { $set: { warningCount: warningCount } }
       );
     }
-    
+
     // Post silme işlemleri (5 adet)
     const deletedPosts = insertedPosts.slice(10, 15);
     for (let i = 0; i < 5; i++) {
       const targetPost = deletedPosts[i];
-      
+
       activityLogs.push({
         adminId: moderatorUser._id.toString(),
         activityType: ActivityType.POST_DELETED,
@@ -847,14 +854,14 @@ async function seed() {
         },
         createdAt: new Date(Date.now() - getRandomInt(1, 20) * 24 * 60 * 60 * 1000),
       });
-      
+
       // Post'u soft delete yap
       await PostModel.updateOne(
         { _id: targetPost._id },
         { $set: { deletedAt: new Date() } }
       );
     }
-    
+
     // Report çözme işlemleri
     const resolvedReports = insertedReports.slice(20, 35);
     for (let i = 0; i < 15; i++) {
@@ -873,7 +880,7 @@ async function seed() {
         });
       }
     }
-    
+
     // Ad oluşturma işlemleri
     for (let i = 0; i < 10; i++) {
       const ad = insertedAds[i];
@@ -889,7 +896,7 @@ async function seed() {
         createdAt: ad.createdAt,
       });
     }
-    
+
     const insertedActivityLogs = await ActivityLogModel.insertMany(activityLogs);
     console.log(`✅ ${insertedActivityLogs.length} activity log oluşturuldu!`);
 
@@ -897,7 +904,7 @@ async function seed() {
     console.log('\nAppeal\'lar oluşturuluyor...');
     const appeals: any[] = [];
     const appealUsers = bannedUsers.slice(0, 5);
-    
+
     // Ban activity log'larını ID'leri ile eşleştir
     const banLogsMap = new Map();
     for (const log of insertedActivityLogs) {
@@ -905,14 +912,14 @@ async function seed() {
         banLogsMap.set(log.targetUserId.toString(), log._id.toString());
       }
     }
-    
+
     for (let i = 0; i < 5; i++) {
       const appealUser = appealUsers[i];
       const banLogId = banLogsMap.get(appealUser._id.toString());
-      
+
       if (banLogId) {
         const appealStatus = i < 2 ? AppealStatus.PENDING : (i === 2 ? AppealStatus.APPROVED : AppealStatus.REJECTED);
-        
+
         appeals.push({
           userId: appealUser._id.toString(),
           banLogId: banLogId,
@@ -920,17 +927,17 @@ async function seed() {
           status: appealStatus,
           reviewedBy: appealStatus !== AppealStatus.PENDING ? adminUser._id.toString() : null,
           reviewedAt: appealStatus !== AppealStatus.PENDING ? new Date(Date.now() - getRandomInt(1, 10) * 24 * 60 * 60 * 1000) : null,
-          adminResponse: appealStatus === AppealStatus.APPROVED 
+          adminResponse: appealStatus === AppealStatus.APPROVED
             ? 'İtirazınız kabul edildi. Ban kaldırıldı.'
             : appealStatus === AppealStatus.REJECTED
-            ? 'İtirazınız reddedildi. Ban devam edecek.'
-            : '',
+              ? 'İtirazınız reddedildi. Ban devam edecek.'
+              : '',
           conversation: [],
           createdAt: new Date(Date.now() - getRandomInt(5, 20) * 24 * 60 * 60 * 1000),
         });
       }
     }
-    
+
     const insertedAppeals = await AppealModel.insertMany(appeals);
     console.log(`✅ ${insertedAppeals.length} appeal oluşturuldu!`);
 
@@ -986,6 +993,49 @@ async function seed() {
         console.log(`✅ ${userData[1].email} kullanıcısı moderator rolüne ayarlandı.`);
       }
     }
+
+    // Campaigns oluştur
+    console.log('\nCampaigns oluşturuluyor...');
+    const campaigns: any[] = [];
+    const businesses = ['Starbucks', 'Koton', 'Burger King', 'Defacto', 'Teknosa', 'MediaMarkt'];
+    for (let i = 0; i < 15; i++) {
+      campaigns.push({
+        businessName: getRandomElement(businesses),
+        title: `${getRandomElement(businesses)}'da Büyük İndirim!`,
+        description: `Seçili ürünlerde %${getRandomElement(['20', '30', '50'])} indirim fırsatı.`,
+        imageUrl: `https://picsum.photos/400/200?random=${i + 2000}`,
+        discountRate: getRandomElement(['10', '20', '30', '40', '50']),
+        city: 'Kastamonu - Tosya',
+        isPaid: Math.random() > 0.5,
+        isActive: true, // Sadece aktifleri göreceğiz
+        createdBy: adminUser._id.toString(),
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      });
+    }
+    const insertedCampaigns = await CampaignModel.insertMany(campaigns);
+    console.log(`✅ ${insertedCampaigns.length} kampanya oluşturuldu!`);
+
+    // Places oluştur
+    console.log('\nPlaces oluşturuluyor...');
+    const places: any[] = [];
+    const placeNames = ['Ayasofya Camii', 'Galata Kulesi', 'Anıtkabir', 'Topkapı Sarayı', 'Efes Antik Kenti', 'Kapadokya Peribacaları', 'Nemrut Dağı'];
+    const placeCategories = ['Tarihi', 'Müze', 'Doğa', 'Anıt'];
+    for (let i = 0; i < placeNames.length; i++) {
+      places.push({
+        name: placeNames[i],
+        description: `${placeNames[i]} tarihi ve turistik açıdan muazzam bir mirastır. Mutlaka ziyaret etmelisiniz.`,
+        city: 'Kastamonu - Tosya',
+        category: getRandomElement(placeCategories),
+        imageUrl: `https://picsum.photos/400/300?random=${i + 3000}`,
+        address: `${placeNames[i]} Meydanı, Merkez`,
+        workingHours: '09:00 - 18:00',
+        entryFee: i % 2 === 0 ? 'Ücretsiz' : '150 TL',
+        isActive: true
+      });
+    }
+    const insertedPlaces = await PlaceModel.insertMany(places);
+    console.log(`✅ ${insertedPlaces.length} turizm mekânı oluşturuldu!`);
 
     console.log(`   Email: ${userData[0].email}`);
     console.log(`   Şifre: 123456`);

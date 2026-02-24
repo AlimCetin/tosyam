@@ -43,4 +43,16 @@ export declare class ConfessionsController {
     report(req: any, id: string, reason: string): Promise<{
         message: string;
     }>;
+    findOne(req: any, id: string): Promise<{
+        id: string;
+        text: string;
+        userId: string;
+        likeCount: number;
+        commentCount: number;
+        isLiked: boolean;
+        createdAt: any;
+    }>;
+    delete(req: any, id: string): Promise<{
+        success: boolean;
+    }>;
 }

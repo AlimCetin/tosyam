@@ -32,6 +32,9 @@ export class Post extends Document {
 
   @Prop({ default: null })
   deletedAt: Date;
+
+  @Prop({ default: '' })
+  city: string;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

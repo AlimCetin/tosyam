@@ -23,12 +23,16 @@ let ReportsService = class ReportsService {
     userModel;
     commentModel;
     messageModel;
-    constructor(reportModel, postModel, userModel, commentModel, messageModel) {
+    campaignModel;
+    placeModel;
+    constructor(reportModel, postModel, userModel, commentModel, messageModel, campaignModel, placeModel) {
         this.reportModel = reportModel;
         this.postModel = postModel;
         this.userModel = userModel;
         this.commentModel = commentModel;
         this.messageModel = messageModel;
+        this.campaignModel = campaignModel;
+        this.placeModel = placeModel;
     }
     async create(userId, createReportDto) {
         if (createReportDto.type === report_entity_1.ReportType.USER && createReportDto.reportedId === userId) {
@@ -179,6 +183,28 @@ let ReportsService = class ReportsService {
                     };
                 }
             }
+            else if (report.type === report_entity_1.ReportType.CAMPAIGN) {
+                const campaign = await this.campaignModel.findById(report.reportedId).lean();
+                if (campaign) {
+                    reportedItem = {
+                        id: campaign._id.toString(),
+                        title: campaign.title,
+                        imageUrl: campaign.imageUrl,
+                        businessName: campaign.businessName,
+                    };
+                }
+            }
+            else if (report.type === report_entity_1.ReportType.PLACE) {
+                const place = await this.placeModel.findById(report.reportedId).lean();
+                if (place) {
+                    reportedItem = {
+                        id: place._id.toString(),
+                        name: place.name,
+                        imageUrl: place.imageUrl,
+                        city: place.city,
+                    };
+                }
+            }
         }
         catch (error) {
         }
@@ -292,6 +318,18 @@ let ReportsService = class ReportsService {
                 throw new common_1.NotFoundException('Message not found');
             }
         }
+        else if (type === report_entity_1.ReportType.CAMPAIGN) {
+            const campaign = await this.campaignModel.findById(reportedId);
+            if (!campaign) {
+                throw new common_1.NotFoundException('Campaign not found');
+            }
+        }
+        else if (type === report_entity_1.ReportType.PLACE) {
+            const place = await this.placeModel.findById(reportedId);
+            if (!place) {
+                throw new common_1.NotFoundException('Place not found');
+            }
+        }
     }
 };
 exports.ReportsService = ReportsService;
@@ -302,7 +340,11 @@ exports.ReportsService = ReportsService = __decorate([
     __param(2, (0, mongoose_1.InjectModel)('User')),
     __param(3, (0, mongoose_1.InjectModel)('Comment')),
     __param(4, (0, mongoose_1.InjectModel)('Message')),
+    __param(5, (0, mongoose_1.InjectModel)('Campaign')),
+    __param(6, (0, mongoose_1.InjectModel)('Place')),
     __metadata("design:paramtypes", [mongoose_2.Model,
+        mongoose_2.Model,
+        mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,

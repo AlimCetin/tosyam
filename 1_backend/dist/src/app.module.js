@@ -22,10 +22,13 @@ const reports_module_1 = require("./reports/reports.module");
 const admin_module_1 = require("./admin/admin.module");
 const ads_module_1 = require("./ads/ads.module");
 const confessions_module_1 = require("./confessions/confessions.module");
+const campaigns_module_1 = require("./campaigns/campaigns.module");
+const places_module_1 = require("./places/places.module");
 const app_controller_1 = require("./app.controller");
 const logger_service_1 = require("./common/logger/logger.service");
 const redis_module_1 = require("./common/redis/redis.module");
 const health_module_1 = require("./health/health.module");
+const rabbitmq_module_1 = require("./common/rabbitmq/rabbitmq.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -46,6 +49,7 @@ exports.AppModule = AppModule = __decorate([
             redis_module_1.RedisModule,
             database_config_1.DatabaseModule,
             health_module_1.HealthModule,
+            rabbitmq_module_1.RabbitMQModule,
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
             posts_module_1.PostsModule,
@@ -55,6 +59,8 @@ exports.AppModule = AppModule = __decorate([
             admin_module_1.AdminModule,
             ads_module_1.AdsModule,
             confessions_module_1.ConfessionsModule,
+            campaigns_module_1.CampaignsModule,
+            places_module_1.PlacesModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [

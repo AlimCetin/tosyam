@@ -20,16 +20,19 @@ const conversation_entity_1 = require("../entities/conversation.entity");
 const message_entity_1 = require("../entities/message.entity");
 const notification_entity_1 = require("../entities/notification.entity");
 const redis_service_1 = require("../common/redis/redis.service");
+const rabbitmq_service_1 = require("../common/rabbitmq/rabbitmq.service");
 let MessagesService = class MessagesService {
     conversationModel;
     messageModel;
     notificationModel;
     redisService;
-    constructor(conversationModel, messageModel, notificationModel, redisService) {
+    rabbitmqService;
+    constructor(conversationModel, messageModel, notificationModel, redisService, rabbitmqService) {
         this.conversationModel = conversationModel;
         this.messageModel = messageModel;
         this.notificationModel = notificationModel;
         this.redisService = redisService;
+        this.rabbitmqService = rabbitmqService;
     }
     async getConversations(userId, page = 1, limit = 20) {
         const skip = (page - 1) * limit;
@@ -216,7 +219,7 @@ let MessagesService = class MessagesService {
         const populatedMessage = await message.populate('senderId', 'email fullName avatar');
         const msgObj = populatedMessage.toObject();
         const sender = msgObj.senderId;
-        return {
+        const messagePayload = {
             id: msgObj._id.toString(),
             conversationId: conversation._id.toString(),
             senderId: sender?._id?.toString() || sender?.toString() || senderId,
@@ -231,6 +234,11 @@ let MessagesService = class MessagesService {
                 avatar: sender?.avatar || null,
             },
         };
+        await this.rabbitmqService.publish('notification.message', {
+            receiverId,
+            messageData: messagePayload,
+        });
+        return messagePayload;
     }
     async markAsRead(conversationId, userId) {
         const userIdStr = String(userId).trim();
@@ -301,6 +309,7 @@ exports.MessagesService = MessagesService = __decorate([
     __metadata("design:paramtypes", [mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
-        redis_service_1.RedisService])
+        redis_service_1.RedisService,
+        rabbitmq_service_1.RabbitMQService])
 ], MessagesService);
 //# sourceMappingURL=messages.service.js.map

@@ -8,7 +8,9 @@ export declare class ReportsService {
     private userModel;
     private commentModel;
     private messageModel;
-    constructor(reportModel: Model<Report>, postModel: Model<any>, userModel: Model<any>, commentModel: Model<any>, messageModel: Model<any>);
+    private campaignModel;
+    private placeModel;
+    constructor(reportModel: Model<Report>, postModel: Model<any>, userModel: Model<any>, commentModel: Model<any>, messageModel: Model<any>, campaignModel: Model<any>, placeModel: Model<any>);
     create(userId: string, createReportDto: CreateReportDto): Promise<import("mongoose").Document<unknown, {}, Report, {}, import("mongoose").DefaultSchemaOptions> & Report & Required<{
         _id: Types.ObjectId;
     }> & {

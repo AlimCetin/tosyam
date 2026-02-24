@@ -22,21 +22,30 @@ const comment_entity_1 = require("../entities/comment.entity");
 const notification_entity_1 = require("../entities/notification.entity");
 const user_entity_1 = require("../entities/user.entity");
 const ad_entity_1 = require("../entities/ad.entity");
+const campaign_entity_1 = require("../entities/campaign.entity");
+const place_entity_1 = require("../entities/place.entity");
 const redis_service_1 = require("../common/redis/redis.service");
+const rabbitmq_service_1 = require("../common/rabbitmq/rabbitmq.service");
 let PostsService = class PostsService {
     postModel;
     commentModel;
     notificationModel;
     userModel;
     adModel;
+    campaignModel;
+    placeModel;
     redisService;
-    constructor(postModel, commentModel, notificationModel, userModel, adModel, redisService) {
+    rabbitmqService;
+    constructor(postModel, commentModel, notificationModel, userModel, adModel, campaignModel, placeModel, redisService, rabbitmqService) {
         this.postModel = postModel;
         this.commentModel = commentModel;
         this.notificationModel = notificationModel;
         this.userModel = userModel;
         this.adModel = adModel;
+        this.campaignModel = campaignModel;
+        this.placeModel = placeModel;
         this.redisService = redisService;
+        this.rabbitmqService = rabbitmqService;
     }
     async create(userId, image, caption, isPrivate = false, hiddenFromFollowers = [], video) {
         if (!image && !video) {
@@ -122,7 +131,7 @@ let PostsService = class PostsService {
             },
         };
     }
-    async getFeed(userId, page = 1, limit = 20) {
+    async getFeed(userId, page = 1, limit = 20, city) {
         const cacheKey = `feed:${userId}:${page}:${limit}`;
         const cached = await this.redisService.get(cacheKey);
         if (cached) {
@@ -146,6 +155,7 @@ let PostsService = class PostsService {
         const posts = await this.postModel.find({
             userId: { $in: finalFollowing },
             deletedAt: null,
+            ...(city ? { $or: [{ city }, { city: { $exists: false } }] } : {}),
             $or: [
                 { isHidden: false },
                 { isHidden: { $exists: false } },
@@ -196,6 +206,8 @@ let PostsService = class PostsService {
             };
         });
         let activeAds = [];
+        let activeCampaigns = [];
+        let activePlaces = [];
         try {
             const now = new Date();
             activeAds = await this.adModel.find({
@@ -207,16 +219,30 @@ let PostsService = class PostsService {
                     { $expr: { $lt: ['$impressionCount', '$maxImpressions'] } },
                 ],
             }).lean();
+            activeCampaigns = await this.campaignModel.find({
+                isActive: true,
+                $and: [
+                    { $or: [{ startDate: { $lte: now } }, { startDate: null }] },
+                    { $or: [{ endDate: { $gt: now } }, { endDate: null }] },
+                ],
+                ...(city ? { city } : {}),
+            }).lean();
+            activePlaces = await this.placeModel.find({
+                isActive: true,
+                ...(city ? { city } : {}),
+            }).lean();
         }
         catch (error) {
-            console.error('Error fetching ads:', error);
+            console.error('Error fetching intertwined content:', error);
         }
-        const AD_INTERVAL = 5;
         const result = [];
         let adIndex = 0;
+        let campaignIndex = 0;
+        let placeIndex = 0;
         for (let i = 0; i < formattedPosts.length; i++) {
             result.push(formattedPosts[i]);
-            if ((i + 1) % AD_INTERVAL === 0 && activeAds.length > 0) {
+            const position = i + 1;
+            if (position % 5 === 0 && activeAds.length > 0) {
                 const ad = activeAds[adIndex % activeAds.length];
                 result.push({
                     id: ad._id.toString(),
@@ -234,6 +260,50 @@ let PostsService = class PostsService {
                     console.error('Error recording ad impression:', err);
                 });
                 adIndex++;
+            }
+            else if (position % 3 === 0 && activeCampaigns.length > 0) {
+                const campaign = activeCampaigns[campaignIndex % activeCampaigns.length];
+                const campaignLikes = campaign.likes || [];
+                result.push({
+                    _id: campaign._id.toString(),
+                    id: campaign._id.toString(),
+                    type: 'campaign',
+                    businessName: campaign.businessName,
+                    title: campaign.title,
+                    description: campaign.description,
+                    imageUrl: campaign.imageUrl,
+                    discountRate: campaign.discountRate,
+                    city: campaign.city,
+                    createdAt: campaign.createdAt,
+                    isActive: campaign.isActive,
+                    likeCount: campaignLikes.length,
+                    commentCount: campaign.commentCount || 0,
+                    isLiked: campaignLikes.includes(userId),
+                    hasCode: campaign.hasCode ?? true,
+                });
+                campaignIndex++;
+            }
+            else if (position % 4 === 0 && activePlaces.length > 0) {
+                const place = activePlaces[placeIndex % activePlaces.length];
+                const placeLikes = place.likes || [];
+                result.push({
+                    _id: place._id.toString(),
+                    id: place._id.toString(),
+                    type: 'place',
+                    name: place.name,
+                    description: place.description,
+                    imageUrl: place.imageUrl,
+                    category: place.category,
+                    city: place.city,
+                    address: place.address,
+                    entryFee: place.entryFee,
+                    workingHours: place.workingHours,
+                    createdAt: place.createdAt,
+                    likeCount: placeLikes.length,
+                    commentCount: place.commentCount || 0,
+                    isLiked: placeLikes.includes(userId),
+                });
+                placeIndex++;
             }
         }
         const feedResult = {
@@ -441,11 +511,27 @@ let PostsService = class PostsService {
                     fromUserId: userId,
                     postId
                 });
-                await this.notificationModel.create({
+                const newNotification = await this.notificationModel.create({
                     userId: postOwnerId,
                     fromUserId: userId,
                     type: 'like',
                     postId: postId,
+                });
+                const fromUser = await this.userModel.findById(userId).select('fullName avatar').lean();
+                await this.rabbitmqService.publish('notification.like', {
+                    receiverId: postOwnerId,
+                    notificationData: {
+                        _id: newNotification._id,
+                        type: 'like',
+                        postId: postId,
+                        fromUser: {
+                            _id: userId,
+                            fullName: fromUser?.fullName || 'User',
+                            avatar: fromUser?.avatar || null,
+                        },
+                        createdAt: newNotification.createdAt,
+                        read: false,
+                    }
                 });
                 const cacheKey = `notification:unread:${postOwnerId}`;
                 const cached = await this.redisService.get(cacheKey);
@@ -527,11 +613,27 @@ let PostsService = class PostsService {
                 fromUserId: userId,
                 postId
             });
-            await this.notificationModel.create({
+            const newNotification = await this.notificationModel.create({
                 userId: postOwnerId,
                 fromUserId: userId,
                 type: 'comment',
                 postId: postId,
+            });
+            const fromUser = await this.userModel.findById(userId).select('fullName avatar').lean();
+            await this.rabbitmqService.publish('notification.comment', {
+                receiverId: postOwnerId,
+                notificationData: {
+                    _id: newNotification._id,
+                    type: 'comment',
+                    postId: postId,
+                    fromUser: {
+                        _id: userId,
+                        fullName: fromUser?.fullName || 'User',
+                        avatar: fromUser?.avatar || null,
+                    },
+                    createdAt: newNotification.createdAt,
+                    read: false,
+                }
             });
             const cacheKey = `notification:unread:${postOwnerId}`;
             const cached = await this.redisService.get(cacheKey);
@@ -749,11 +851,16 @@ exports.PostsService = PostsService = __decorate([
     __param(2, (0, mongoose_1.InjectModel)(notification_entity_1.Notification.name)),
     __param(3, (0, mongoose_1.InjectModel)(user_entity_1.User.name)),
     __param(4, (0, mongoose_1.InjectModel)(ad_entity_1.Ad.name)),
+    __param(5, (0, mongoose_1.InjectModel)(campaign_entity_1.Campaign.name)),
+    __param(6, (0, mongoose_1.InjectModel)(place_entity_1.Place.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
-        redis_service_1.RedisService])
+        mongoose_2.Model,
+        mongoose_2.Model,
+        redis_service_1.RedisService,
+        rabbitmq_service_1.RabbitMQService])
 ], PostsService);
 //# sourceMappingURL=posts.service.js.map
